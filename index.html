@@ -1,0 +1,235 @@
+<!DOCTYPE1 html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPG Панель Управления Персонажем</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'VT323', monospace;
+      background-color: #0d0f18;
+      color: #e2e8f0;
+      user-select: none;
+    }
+    .pixel-font { font-family: 'Press Start 2P', cursive; }
+    .pixel-box {
+      border: 4px solid #1e293b;
+      box-shadow: 0 4px 0 #000;
+    }
+    .pixel-btn {
+      transition: all 0.1s ease;
+      box-shadow: 0 4px 0 #000;
+    }
+    .pixel-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 0 0 #000;
+    }
+    .scanlines {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+    }
+  </style>
+</head>
+<body class="p-4 scanlines min-h-screen flex flex-col justify-center items-center">
+
+  <!-- Главный контейнер виджета -->
+  <div class="w-full max-w-md bg-slate-900 pixel-box p-5 rounded-lg border-2 border-indigo-500/30 relative overflow-hidden">
+    
+    <!-- Шапка персонажа -->
+    <div class="flex items-center justify-between mb-4 border-b-2 border-slate-800 pb-3">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 bg-indigo-950 border-2 border-indigo-400 flex items-center justify-center rounded text-2xl">
+          🧙‍♂️
+        </div>
+        <div>
+          <h1 class="pixel-font text-xs text-indigo-400 tracking-wider">БИЛД: ЧИСТЫЙ РЕЖИМ</h1>
+          <div class="text-lg text-slate-400">Уровень <span id="player-level" class="text-yellow-400 font-bold">1</span></div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="text-xs text-slate-500 uppercase">Стрик Чистоты</div>
+        <div class="pixel-font text-sm text-emerald-400"><span id="streak-days">0</span> ДНЕЙ</div>
+      </div>
+    </div>
+
+    <!-- Индикатор Дебаффа (если активирован) -->
+    <div id="debuff-banner" class="hidden mb-4 p-2 bg-red-950/80 border border-red-500 rounded text-center">
+      <span class="pixel-font text-[10px] text-red-400 block mb-1">⚠️ ДЕБАФФ: ВЫГОРАНИЕ РЕЦЕПТОРОВ</span>
+      <span class="text-xs text-red-300">Штраф: −50% к получаемому XP за действия</span>
+    </div>
+
+    <!-- Шкала Опыта (XP) -->
+    <div class="mb-4">
+      <div class="flex justify-between text-xs mb-1">
+        <span class="text-slate-400">Опыт Персонажа (XP)</span>
+        <span class="text-indigo-300"><span id="current-xp">0</span> / <span id="max-xp">100</span> XP</span>
+      </div>
+      <div class="w-full bg-slate-950 h-4 border border-slate-700 rounded p-0.5">
+        <div id="xp-bar" class="bg-indigo-500 h-full rounded transition-all duration-300" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Макросы быстрого переключения (Активный XP) -->
+    <div class="mb-5">
+      <h2 class="pixel-font text-[10px] text-slate-400 mb-2 uppercase">⚡ Быстрый Контратак (Переключение)</h2>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="triggerMacro('physical')" class="pixel-btn bg-emerald-900/40 hover:bg-emerald-800/60 border border-emerald-500 p-2 rounded text-left">
+          <div class="text-emerald-400 text-sm font-bold">💪 Физика (+20 XP)</div>
+          <div class="text-[11px] text-slate-400">20 отжиманий / холодная вода</div>
+        </button>
+        <button onclick="triggerMacro('mental')" class="pixel-btn bg-cyan-900/40 hover:bg-cyan-800/60 border border-cyan-500 p-2 rounded text-left">
+          <div class="text-cyan-400 text-sm font-bold">🧠 Фокус (+20 XP)</div>
+          <div class="text-[11px] text-slate-400">Перехват ЦНС / Чтение</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Квесты Созидания (Ежедневная прокачка) -->
+    <div class="mb-5">
+      <h2 class="pixel-font text-[10px] text-slate-400 mb-2 uppercase">🎯 Квесты Созидания (Награды за дела)</h2>
+      <div class="space-y-2">
+        <label class="flex items-center justify-between p-2 bg-slate-950 border border-slate-800 rounded cursor-pointer hover:border-slate-700">
+          <span class="text-sm">🏋️‍♂️ Силовая / Кардио тренировка</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-yellow-500">+50 XP</span>
+            <input type="checkbox" onchange="toggleQuest(this, 50)" class="w-4 h-4 accent-indigo-500">
+          </div>
+        </label>
+        <label class="flex items-center justify-between p-2 bg-slate-950 border border-slate-800 rounded cursor-pointer hover:border-slate-700">
+          <span class="text-sm">🧘‍♂️ 1 час работы/учебы в тишине</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-yellow-500">+40 XP</span>
+            <input type="checkbox" onchange="toggleQuest(this, 40)" class="w-4 h-4 accent-indigo-500">
+          </div>
+        </label>
+        <label class="flex items-center justify-between p-2 bg-slate-950 border border-slate-800 rounded cursor-pointer hover:border-slate-700">
+          <span class="text-sm">📖 Чтение полезной литературы (30 мин)</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-yellow-500">+30 XP</span>
+            <input type="checkbox" onchange="toggleQuest(this, 30)" class="w-4 h-4 accent-indigo-500">
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Управление Стриком и Срыв -->
+    <div class="pt-3 border-t border-slate-800 flex justify-between items-center">
+      <button onclick="addCleanDay()" class="pixel-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs px-3 py-2 rounded text-slate-300">
+        ✅ Чистый день (+1 к Стрику)
+      </button>
+      <button onclick="triggerRelapse()" class="pixel-btn bg-red-950/40 hover:bg-red-900/60 border border-red-700 text-xs px-3 py-2 rounded text-red-400">
+        ⚠️ Зафиксировать срыв
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    // Аудиодвижок на Web Audio API (Звуковые эффекты)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(freq, type, duration) {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    // Состояние Игры
+    let gameState = JSON.parse(localStorage.getItem('rpg_notion_state')) || {
+      level: 1,
+      xp: 0,
+      maxXp: 100,
+      streak: 0,
+      hasDebuff: false,
+      debuffEndTime: 0
+    };
+
+    function saveState() {
+      localStorage.setItem('rpg_notion_state', JSON.stringify(gameState));
+      updateUI();
+    }
+
+    function checkDebuff() {
+      if (gameState.hasDebuff && Date.now() > gameState.debuffEndTime) {
+        gameState.hasDebuff = false;
+      }
+    }
+
+    function addXP(amount) {
+      checkDebuff();
+      let finalXP = gameState.hasDebuff ? Math.floor(amount * 0.5) : amount;
+      gameState.xp += finalXP;
+      
+      playSound(587.33, 'square', 0.15); // Звук XP
+
+      if (gameState.xp >= gameState.maxXp) {
+        gameState.xp -= gameState.maxXp;
+        gameState.level += 1;
+        gameState.maxXp = Math.floor(gameState.maxXp * 1.3);
+        playSound(880, 'triangle', 0.4); // Звук Level-Up
+      }
+      saveState();
+    }
+
+    function triggerMacro(type) {
+      addXP(20);
+    }
+
+    function toggleQuest(checkbox, xpAmount) {
+      if (checkbox.checked) {
+        addXP(xpAmount);
+      } else {
+        gameState.xp = Math.max(0, gameState.xp - xpAmount);
+        saveState();
+      }
+    }
+
+    function addCleanDay() {
+      gameState.streak += 1;
+      playSound(523.25, 'sine', 0.2);
+      saveState();
+    }
+
+    function triggerRelapse() {
+      if (confirm("Зафиксировать срыв? Стрик будет сброшен, и активируется дебафф 'Выгорание рецепторов' (-50% XP) на 24 часа.")) {
+        gameState.streak = 0;
+        gameState.hasDebuff = true;
+        gameState.debuffEndTime = Date.now() + (24 * 60 * 60 * 1000); // 24 часа
+        playSound(150, 'sawtooth', 0.5); // Звук срыва
+        saveState();
+      }
+    }
+
+    function updateUI() {
+      checkDebuff();
+      document.getElementById('player-level').innerText = gameState.level;
+      document.getElementById('streak-days').innerText = gameState.streak;
+      document.getElementById('current-xp').innerText = gameState.xp;
+      document.getElementById('max-xp').innerText = gameState.maxXp;
+      
+      const xpPercent = Math.min(100, Math.floor((gameState.xp / gameState.maxXp) * 100));
+      document.getElementById('xp-bar').style.width = `${xpPercent}%`;
+
+      const debuffBanner = document.getElementById('debuff-banner');
+      if (gameState.hasDebuff) {
+        debuffBanner.classList.remove('hidden');
+      } else {
+        debuffBanner.classList.add('hidden');
+      }
+    }
+
+    // Инициализация при загрузке
+    updateUI();
+  </script>
+</body>
+</html>
