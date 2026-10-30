@@ -1,835 +1,560 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    :root {
-      --bg-color: #ffffff;
-      --card-bg: #f7f6f3;
-      --text-color: #37352f;
-      --accent-color: #2eaadc;
-      --progress-bg: #e0e0e0;
-      --border-color: #e9e9e8;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg-color: #191919;
-        --card-bg: #202020;
-        --text-color: rgba(255, 255, 255, 0.81);
-        --accent-color: #2eaadc;
-        --progress-bg: #373737;
-        --border-color: #2f2f2f;
-      }
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: transparent;
-      color: var(--text-color);
-      margin: 0;
-      padding: 16px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .card {
-      background-color: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 20px;
-      width: 100%;
-      max-width: 380px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      box-sizing: border-box;
-    }
-
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-
-    .profile {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .avatar {
-      font-size: 32px;
-      background: rgba(46, 170, 220, 0.1);
-      width: 48px;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-    }
-
-    .title {
-      font-weight: 700;
-      font-size: 16px;
-      margin: 0;
-    }
-
-    .level-badge {
-      font-size: 13px;
-      color: #787774;
-      margin-top: 2px;
-    }
-
-    .status-text {
-      font-size: 11px;
-      color: #9b9a97;
-      margin-top: 4px;
-    }
-
-    .progress-container {
-      margin: 16px 0;
-    }
-
-    .progress-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      margin-bottom: 6px;
-      font-weight: 600;
-    }
-
-    .progress-bar-bg {
-      background-color: var(--progress-bg);
-      height: 12px;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-
-    .progress-bar-fill {
-      background-color: var(--accent-color);
-      height: 100%;
-      width: 0%;
-      transition: width 0.4s ease;
-    }
-
-    .actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 16px;
-    }
-
-    button {
-      flex: 1;
-      border: none;
-      background-color: var(--accent-color);
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-
-    button:hover {
-      opacity: 0.85;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    button.reset-btn {
-      background-color: transparent;
-      color: #9b9a97;
-      border: 1px solid var(--border-color);
-      flex: 0;
-    }
-  </style>
-</head>
-<body>
-
-  <div class="card">
-    <div class="header">
-      <div class="profile">
-        <div class="avatar" id="avatar">🧙‍♂️</div>
-        <div>
-          <div class="title" id="char-name">Герой Notion</div>
-          <div class="level-badge">Уровень <span id="level">1</span></div>
-          <div class="status-text" id="sync-status">Загрузка данных...</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="progress-container">
-      <div class="progress-label">
-        <span>Прогресс XP</span>
-        <span><span id="current-xp">0</span> / <span id="max-xp">100</span> XP</span>
-      </div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="progress-fill"></div>
-      </div>
-    </div>
-
-    <div class="actions">
-      <button id="btn-10" onclick="addXP(10)" disabled>+10 XP</button>
-      <button id="btn-25" onclick="addXP(25)" disabled>+25 XP</button>
-      <button id="btn-50" onclick="addXP(50)" disabled>+50 XP</button>
-      <button class="reset-btn" id="btn-reset" onclick="resetProgress()" title="Сбросить" disabled>↺</button>
-    </div>
-  </div>
-
-  <script>
-    const BIN_ID = "6ae4d805ac6210605a5f66f0";
-    const API_KEY = "$2a$10$zO6OXGmcu2KvGcO3IaTkRODmKt2zrnA/F9oJaKG3K2Te28jjW81yu";
-
-    let xp = 0;
-    let level = 1;
-    const avatars = ['🌱', '🧙‍♂️', '⚔️', '🛡️', '👑', '🌌'];
-
-    function getXpForNextLevel(lvl) {
-      return lvl * 100;
-    }
-
-    function updateUI() {
-      const maxXp = getXpForNextLevel(level);
-      const percentage = Math.min((xp / maxXp) * 100, 100);
-
-      document.getElementById('level').innerText = level;
-      document.getElementById('current-xp').innerText = xp;
-      document.getElementById('max-xp').innerText = maxXp;
-      document.getElementById('progress-fill').style.width = percentage + '%';
-
-      const avatarIndex = Math.min(Math.floor((level - 1) / 2), avatars.length - 1);
-      document.getElementById('avatar').innerText = avatars[avatarIndex];
-    }
-
-    function setButtonsEnabled(enabled) {
-      document.getElementById('btn-10').disabled = !enabled;
-      document.getElementById('btn-25').disabled = !enabled;
-      document.getElementById('btn-50').disabled = !enabled;
-      document.getElementById('btn-reset').disabled = !enabled;
-    }
-
-    // Загрузка данных из JSONBin.io при открытии
-    async function loadData() {
-      const statusEl = document.getElementById('sync-status');
-      try {
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-          headers: {
-            'X-Master-Key': API_KEY
-          }
-        });
-
-        if (!response.ok) throw new Error('Ошибка загрузки');
-
-        const data = await response.json();
-        if (data.record) {
-          xp = data.record.xp !== undefined ? data.record.xp : 0;
-          level = data.record.level !== undefined ? data.record.level : 1;
-        }
-
-        updateUI();
-        statusEl.innerText = 'Синхронизировано ✓';
-        setButtonsEnabled(true);
-      } catch (error) {
-        console.error(error);
-        statusEl.innerText = 'Ошибка сети ❌';
-        setButtonsEnabled(true);
-      }
-    }
-
-    // Сохранение данных в JSONBin.io при изменении
-    async function saveData() {
-      const statusEl = document.getElementById('sync-status');
-      statusEl.innerText = 'Сохранение...';
-      setButtonsEnabled(false);
-
-      try {
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Master-Key': API_KEY
-          },
-          body: JSON.stringify({ xp: xp, level: level })
-        });
-
-        if (!response.ok) throw new Error('Ошибка сохранения');
-
-        statusEl.innerText = 'Синхронизировано ✓';
-      } catch (error) {
-        console.error(error);
-        statusEl.innerText = 'Ошибка сохранения ❌';
-      } finally {
-        setButtonsEnabled(true);
-      }
-    }
-
-    async function addXP(amount) {
-      xp += amount;
-      let maxXp = getXpForNextLevel(level);
-
-      while (xp >= maxXp) {
-        xp -= maxXp;
-        level++;
-        maxXp = getXpForNextLevel(level);
-      }
-
-      updateUI();
-      await saveData();
-    }
-
-    async function resetProgress() {
-      if (confirm("Сбросить весь прогресс?")) {
-        xp = 0;
-        level = 1;
-        updateUI();
-        await saveData();
-      }
-    }
-
-    // Запускаем загрузку
-    loadData();
-  </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minecraft RPG Dashboard (Custom Pickaxe & Block Break)</title>
+  <title>Minecraft Survival HUD & Character Leveling</title>
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <!-- Google Fonts for Retro Pixel Aesthetics -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            pixel: ['"Press Start 2P"', 'monospace'],
+            vt: ['"VT323"', 'monospace']
+          },
+          colors: {
+            mc: {
+              bg: '#121216',
+              card: '#1c1c24',
+              border: '#3d3d4a',
+              stone: '#8b8b8b',
+              darkStone: '#373737',
+              gold: '#fcc200',
+              emerald: '#55ff55',
+              diamond: '#55ffff',
+              redstone: '#ff5555',
+              heart: '#ff2244'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
     body {
+      background-color: #0c0c0f;
+      color: #e0e0e0;
       font-family: 'VT323', monospace;
-      background-color: #1a1a1a;
-      color: #373737;
+      font-size: 1.35rem;
       user-select: none;
-      image-rendering: pixelated;
       overflow-x: hidden;
     }
 
-    /* Главное окно GUI Minecraft */
-    .mc-gui-panel {
+    /* Minecraft Inventory / GUI Box Style */
+    .mc-box {
       background-color: #c6c6c6;
-      border-top: 4px solid #ffffff;
-      border-left: 4px solid #ffffff;
-      border-right: 4px solid #555555;
-      border-bottom: 4px solid #555555;
-      box-shadow: 0 0 0 4px #000000;
+      border: 3px solid #373737;
+      box-shadow: 
+        inset -3px -3px 0px 0px #555555,
+        inset 3px 3px 0px 0px #ffffff,
+        0 6px 20px rgba(0,0,0,0.7);
+    }
+
+    .mc-dark-box {
+      background-color: #181820;
+      border: 3px solid #3d3d4a;
+      box-shadow: 
+        inset -3px -3px 0px 0px #0c0c10,
+        inset 3px 3px 0px 0px #2e2e3a,
+        0 4px 15px rgba(0,0,0,0.5);
+    }
+
+    /* Classic Minecraft Button Bevel */
+    .mc-btn {
       position: relative;
+      background-color: #707070;
+      border: 2px solid #373737;
+      box-shadow: inset -2px -2px 0px 0px #222222, inset 2px 2px 0px 0px #a0a0a0;
+      transition: all 0.05s ease;
     }
 
-    /* Ячейки инвентаря */
-    .mc-slot {
-      background-color: #8b8b8b;
-      border-top: 3px solid #373737;
-      border-left: 3px solid #373737;
-      border-right: 3px solid #ffffff;
-      border-bottom: 3px solid #ffffff;
+    .mc-btn:hover {
+      background-color: #7e7e7e;
+      box-shadow: inset -2px -2px 0px 0px #2a2a2a, inset 2px 2px 0px 0px #b5b5b5;
     }
 
-    /* Кнопка Minecraft */
-    .mc-button {
-      background-color: #999999;
-      border-top: 3px solid #ffffff;
-      border-left: 3px solid #ffffff;
-      border-right: 3px solid #373737;
-      border-bottom: 3px solid #373737;
-      color: #e0e0e0;
-      text-shadow: 2px 2px 0px #3f3f3f;
-    }
-    .mc-button:hover {
-      background-color: #a8a8a8;
-      color: #ffffa0;
-    }
-    .mc-button:active {
-      border-top: 3px solid #373737;
-      border-left: 3px solid #373737;
-      border-right: 3px solid #ffffff;
-      border-bottom: 3px solid #ffffff;
+    .mc-btn:active {
+      transform: translateY(2px);
+      box-shadow: inset -1px -1px 0px 0px #b5b5b5, inset 1px 1px 0px 0px #222222;
     }
 
-    /* Кнопка срыва */
-    .mc-button-danger {
-      background-color: #a83232;
-      border-top: 3px solid #ff6b6b;
-      border-left: 3px solid #ff6b6b;
-      border-right: 3px solid #4a1111;
-      border-bottom: 3px solid #4a1111;
-      color: #ffffff;
-      text-shadow: 2px 2px 0px #200000;
+    .mc-btn-green {
+      background-color: #3c8527;
+      box-shadow: inset -2px -2px 0px 0px #1e4213, inset 2px 2px 0px 0px #5cb83c;
     }
-    .mc-button-danger:hover {
-      background-color: #c43d3d;
+    .mc-btn-green:hover {
+      background-color: #489b30;
     }
 
-    /* Каноничные тексты без неона */
-    .mc-text-green {
-      color: #55ff55;
-      text-shadow: 2px 2px 0px #00aa00;
+    .mc-btn-red {
+      background-color: #9e2a2b;
+      box-shadow: inset -2px -2px 0px 0px #501515, inset 2px 2px 0px 0px #d94b4c;
     }
-    .mc-text-gold {
-      color: #ffff55;
-      text-shadow: 2px 2px 0px #aaaa00;
-    }
-    .mc-text-aqua {
-      color: #55ffff;
-      text-shadow: 2px 2px 0px #00aaaa;
-    }
-    .mc-text-dark {
-      color: #1f1f1f;
-      text-shadow: 1px 1px 0px #8b8b8b;
+    .mc-btn-red:hover {
+      background-color: #b83234;
     }
 
-    /* Шкала опыта XP */
-    .mc-xp-bg {
-      background-color: #112200;
-      border: 2px solid #000000;
-    }
-    .mc-xp-fill {
-      background-color: #80ff20;
-      box-shadow: inset 0 2px 0 #c0ff60, inset 0 -2px 0 #40a000;
+    /* Floating XP Particle Animation */
+    @keyframes floatUpFade {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      50% { opacity: 0.9; transform: translateY(-25px) scale(1.1); }
+      100% { opacity: 0; transform: translateY(-50px) scale(0.9); }
     }
 
-    /* АНИМАЦИИ КИРКИ И ТРЯСКИ */
-    @keyframes pickaxeMining {
-      0% { transform: rotate(0deg) translate(0, 0); }
-      30% { transform: rotate(-65deg) translate(-15px, -25px); }
-      70% { transform: rotate(15deg) translate(5px, 10px); }
-      100% { transform: rotate(0deg) translate(0, 0); }
-    }
-
-    @keyframes guiShake {
-      0% { transform: translate(0, 0); }
-      20% { transform: translate(-3px, 3px); }
-      40% { transform: translate(3px, -3px); }
-      60% { transform: translate(-3px, -2px); }
-      80% { transform: translate(2px, 3px); }
-      100% { transform: translate(0, 0); }
-    }
-
-    @keyframes guiShatter {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.04) rotate(1deg); opacity: 0.7; }
-      100% { transform: scale(0.1) rotate(-20deg); opacity: 0; }
-    }
-
-    .animate-mining {
-      animation: pickaxeMining 0.28s ease-in-out infinite;
-    }
-
-    .animate-shake {
-      animation: guiShake 0.12s ease-in-out infinite;
-    }
-
-    .animate-shatter {
-      animation: guiShatter 0.35s ease-in forwards;
-    }
-
-    /* КВАДРАТНЫЕ ТРЕЩИНЫ МАЙНКРАФТА (Пиксельная сетка разрушения) */
-    .mc-crack-grid {
+    .xp-particle {
       position: absolute;
-      inset: 0;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      grid-template-rows: repeat(4, 1fr);
       pointer-events: none;
-      z-index: 45;
-      opacity: 0;
-      transition: opacity 0.1s;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      font-weight: bold;
+      z-index: 50;
+      animation: floatUpFade 0.9s cubic-bezier(0.22, 1, 0.36, 1) FORWARDS;
+      text-shadow: 2px 2px 0px #000;
     }
-    .mc-crack-pixel {
-      background-image: radial-gradient(circle, #000 60%, transparent 60%);
-      background-size: 6px 6px;
-      opacity: 0;
-    }
-    .crack-stage-1 .mc-crack-pixel:nth-child(3),
-    .crack-stage-1 .mc-crack-pixel-6,
-    .crack-stage-1 .mc-crack-pixel-10 { opacity: 0.6; }
 
-    .crack-stage-2 .mc-crack-pixel { opacity: 0.5; }
-    .crack-stage-2 .mc-crack-pixel:nth-child(odd) { opacity: 0.8; }
+    /* Glow utilities */
+    .glow-emerald { box-shadow: 0 0 10px rgba(85, 255, 85, 0.5); }
+    .glow-gold { box-shadow: 0 0 10px rgba(252, 194, 0, 0.5); }
+    .glow-diamond { box-shadow: 0 0 10px rgba(85, 255, 255, 0.5); }
 
-    .crack-stage-3 .mc-crack-pixel { opacity: 0.9; }
-
-    .mc-particle {
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      background-color: #8b8b8b;
-      border: 2px solid #222;
-      pointer-events: none;
-      z-index: 100;
-    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #121216; }
+    ::-webkit-scrollbar-thumb { background: #3d3d4a; }
   </style>
 </head>
-<body class="p-4 min-h-screen flex items-center justify-center relative">
+<body class="p-2 md:p-4 min-h-screen flex items-center justify-center">
 
-  <!-- АНИМАЦИОННЫЙ ОВЕРЛЕЙ -->
-  <div id="animation-overlay" class="fixed inset-0 pointer-events-none z-50 flex items-center justify-center hidden">
+  <!-- Main Widget Container (Minecraft Dark Inventory HUD) -->
+  <div class="w-full max-w-2xl mc-dark-box rounded-none p-4 relative z-10 text-slate-100 overflow-hidden">
     
-    <!-- ВАША ТОЧНАЯ КАРТИНКА КИРКИ ИЗ СКРИНШОТА -->
-    <img id="custom-pickaxe" src="https://i.ibb.co/6R55k27/Gemini-Generated-Image-bfs7fjbfs7fjbfs7.jpg" 
-         class="w-40 h-40 absolute z-50 object-contain drop-shadow-[0_10px_0_rgba(0,0,0,0.8)] hidden" alt="Minecraft Pickaxe">
+    <!-- Top Bar Header: Character Profile -->
+    <div class="flex flex-wrap items-center justify-between border-b-2 border-mc-border pb-3 mb-4 gap-3">
+      <div class="flex items-center space-x-3">
+        <!-- Minecraft Head / Avatar Frame -->
+        <div class="relative w-14 h-14 bg-mc-bg mc-box flex items-center justify-center overflow-hidden shrink-0">
+          <svg id="heroAvatar" class="w-10 h-10 text-mc-emerald transition-all duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- Steve / Diamond Armor Silhouette -->
+            <rect x="7" y="3" width="10" height="10" fill="#55ffff" opacity="0.3"/>
+            <rect x="9" y="5" width="2" height="2" fill="#ff5555"/>
+            <rect x="13" y="5" width="2" height="2" fill="#ff5555"/>
+            <path d="M6 13h12v8H6z" fill="#3b82f6"/>
+          </svg>
+        </div>
 
-    <!-- Achievement Banner -->
-    <div id="levelup-banner" class="mc-gui-panel p-6 text-center shadow-2xl z-50 hidden">
-      <div class="text-2xl font-bold mc-text-gold mb-1">ДОСТИЖЕНИЕ ПОЛУЧЕНО!</div>
-      <div class="text-4xl font-bold mc-text-green mb-2">УРОВЕНЬ <span id="banner-level-num">2</span></div>
-      <div class="text-base text-[#1f1f1f] font-bold">НОВЫЕ ВОЗМОЖНОСТИ РАЗБЛОКИРОВАНЫ</div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-pixel text-[10px] text-mc-gold tracking-wider uppercase" id="heroTitle">SURVIVAL EXPERT</span>
+            <span class="font-pixel text-[10px] bg-mc-dark-box border border-mc-border px-1.5 py-0.5 text-mc-emerald">LVL <span id="lvlDisplay">1</span></span>
+          </div>
+          <p class="text-sm text-slate-400 font-vt tracking-wide">DIFFICULTY: <span id="statusRank" class="text-mc-emerald">HARDCORE SURVIVAL</span></p>
+        </div>
+      </div>
+
+      <!-- Sound Toggle -->
+      <div class="flex items-center space-x-2">
+        <button id="soundToggleBtn" onclick="toggleAudio()" class="mc-btn text-xs px-2.5 py-1 text-slate-200 font-pixel text-[9px] flex items-center gap-1">
+          <span id="soundIcon">🔊</span> AUDIO: <span id="soundState">ON</span>
+        </button>
+      </div>
     </div>
+
+    <!-- MAIN BARS SECTION -->
+    <div class="space-y-3 mb-5">
+      
+      <!-- XP Progress Bar (Minecraft XP Bar Style) -->
+      <div>
+        <div class="flex justify-between text-xs font-pixel mb-1">
+          <span class="text-mc-emerald flex items-center gap-1">🟩 EXPERIENCE ORB (XP)</span>
+          <span class="text-slate-300"><span id="xpCurrent">0</span> / <span id="xpMax">100</span> XP</span>
+        </div>
+        <div class="w-full bg-black h-4 border-2 border-mc-border p-0.5 relative">
+          <div id="xpBar" class="h-full bg-gradient-to-r from-emerald-700 to-mc-emerald glow-emerald transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Clean Streak (Totem / Shield Bar) -->
+      <div>
+        <div class="flex justify-between text-xs font-pixel mb-1">
+          <span class="text-mc-gold flex items-center gap-1">🛡️ CLEAN STREAK</span>
+          <span class="text-mc-gold font-bold"><span id="streakDisplay">0</span> DAYS</span>
+        </div>
+        <div class="w-full bg-black h-4 border-2 border-mc-border p-0.5 relative">
+          <div id="streakBar" class="h-full bg-gradient-to-r from-yellow-700 to-mc-gold glow-gold transition-all duration-300" style="width: 5%"></div>
+        </div>
+      </div>
+
+      <!-- Health (Receptor Health) & Food (Mental Focus) Bars Grid -->
+      <div class="grid grid-cols-2 gap-3 pt-1">
+        <!-- Dopamine / Receptor Health (Hearts) -->
+        <div>
+          <div class="flex justify-between text-xs font-vt mb-1">
+            <span class="text-mc-heart">💖 RECEPTOR HEALTH</span>
+            <span class="text-red-300"><span id="dopamineVal">50</span>%</span>
+          </div>
+          <div class="w-full bg-black h-3 border-2 border-mc-border p-0.5">
+            <div id="dopamineBar" class="h-full bg-mc-heart transition-all duration-300 shadow-[0_0_8px_rgba(255,34,68,0.7)]" style="width: 50%"></div>
+          </div>
+        </div>
+
+        <!-- Mental Focus / Food Bar -->
+        <div>
+          <div class="flex justify-between text-xs font-vt mb-1">
+            <span class="text-mc-diamond">⚡ MENTAL FOCUS</span>
+            <span class="text-cyan-300"><span id="focusVal">60</span>%</span>
+          </div>
+          <div class="w-full bg-black h-3 border-2 border-mc-border p-0.5">
+            <div id="focusBar" class="h-full bg-mc-diamond glow-diamond transition-all duration-300" style="width: 60%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MACRO QUICK-ACTIONS (MINECRAFT ITEM SLOTS) -->
+    <div class="mb-5">
+      <h3 class="font-pixel text-[10px] text-slate-300 mb-2.5 uppercase tracking-wider flex items-center gap-1">
+        <span>⚔️</span> Action Inventory (+XP)
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        
+        <button onclick="triggerMacro('mining', 25, 5, 10, 'Mining Session!')" class="mc-btn text-left p-2 text-slate-100 group">
+          <div class="text-lg mb-0.5">⛏️</div>
+          <div class="font-pixel text-[9px] text-mc-gold group-hover:text-white">MINING RESET</div>
+          <div class="text-xs text-slate-300 font-vt">+25 XP | +Focus</div>
+        </button>
+
+        <button onclick="triggerMacro('crafting', 20, 10, 5, 'Crafting Focus!')" class="mc-btn text-left p-2 text-slate-100 group">
+          <div class="text-lg mb-0.5">🪵</div>
+          <div class="font-pixel text-[9px] text-mc-diamond group-hover:text-white">CRAFTING FOCUS</div>
+          <div class="text-xs text-slate-300 font-vt">+20 XP | +Receptors</div>
+        </button>
+
+        <button onclick="triggerMacro('explore', 30, 15, 10, 'Nature Expedition!')" class="mc-btn text-left p-2 text-slate-100 group">
+          <div class="text-lg mb-0.5">🌲</div>
+          <div class="font-pixel text-[9px] text-mc-emerald group-hover:text-white">EXPEDITION</div>
+          <div class="text-xs text-slate-300 font-vt">+30 XP | Clean Mind</div>
+        </button>
+
+        <button onclick="triggerStreakWin()" class="mc-btn mc-btn-green text-left p-2 text-white group">
+          <div class="text-lg mb-0.5">🛏️</div>
+          <div class="font-pixel text-[9px] text-mc-emerald group-hover:text-white">+1 SLEEP DAY</div>
+          <div class="text-xs text-emerald-200 font-vt">+50 XP | +1 Streak</div>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- DAILY QUEST LOG -->
+    <div class="mb-5">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-pixel text-[10px] text-slate-300 uppercase tracking-wider flex items-center gap-1">
+          <span>📜</span> Daily Survival Quests
+        </h3>
+        <span class="text-xs font-vt text-slate-400" id="questProgressText">0/4 Completed</span>
+      </div>
+
+      <div class="space-y-1.5 font-vt text-base" id="questContainer">
+        <!-- Daily Quests injected via JS -->
+      </div>
+    </div>
+
+    <!-- RELAPSE / FAIL EMERGENCY BUTTON -->
+    <div class="border-t border-mc-border pt-3 flex items-center justify-between">
+      <div class="text-xs font-vt text-slate-400">
+        Hardcore Death Protocol:
+      </div>
+      <button onclick="openRelapseModal()" class="mc-btn mc-btn-red text-red-200 px-3 py-1.5 font-pixel text-[9px] flex items-center gap-1">
+        💀 RESPAWN / RESET STREAK
+      </button>
+    </div>
+
   </div>
 
-  <!-- ОСНОВНАЯ GUI ПАНЕЛЬ -->
-  <div id="main-gui" class="mc-gui-panel w-full max-w-md p-4 relative">
-    
-    <!-- КВАДРАТНЫЕ ТРЕЩИНЫ (Накладываются на меню при майнинге) -->
-    <div id="block-cracks" class="mc-crack-grid">
-      <div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div>
-      <div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div>
-      <div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div>
-      <div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div>
-    </div>
-
-    <!-- Шапка инвентаря -->
-    <div class="flex items-center justify-between mb-3 border-b-2 border-[#555] pb-2">
-      <div class="flex items-center gap-3">
-        <div class="mc-slot w-12 h-12 flex items-center justify-center text-2xl">
-          📘
-        </div>
-        <div>
-          <div class="text-xl font-bold mc-text-dark">ИНВЕНТАРЬ ИГРОКА</div>
-          <div class="text-lg text-[#373737] font-bold">Уровень: <span id="player-level" class="mc-text-green text-xl">1</span></div>
-        </div>
+  <!-- RELAPSE CONFIRMATION MODAL -->
+  <div id="relapseModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="mc-box max-w-md w-full p-5 text-slate-900 relative">
+      <h3 class="font-pixel text-red-700 text-xs mb-3 flex items-center gap-2">
+        <span>💀</span> YOU DIED!
+      </h3>
+      <p class="font-vt text-lg text-slate-800 mb-4">
+        Reporting a relapse will <strong class="text-red-700">reset your Clean Streak to Day 0</strong> and inflict a severe survival penalty.
+      </p>
+      <div class="bg-red-200 p-2 border-2 border-red-400 mb-4 text-xs font-vt text-red-900">
+        "Respawn successfully and rebuild your base from the ground up. Every death makes you tougher."
       </div>
-
-      <div class="text-right">
-        <div class="text-xs text-[#555] flex items-center justify-end gap-1 font-bold">
-          <span>СИНХРОНИЗАЦИЯ</span>
-          <span id="sync-status" class="w-2.5 h-2.5 rounded-full bg-yellow-500 border border-black"></span>
-        </div>
-        <div class="text-lg font-bold text-[#111]">СТРИК: <span id="streak-days" class="mc-text-green">0</span> ДН</div>
-      </div>
-    </div>
-
-    <!-- Дебафф баннер -->
-    <div id="debuff-banner" class="hidden mb-3 p-2 bg-[#550000] border-2 border-[#ff0000] text-center text-white">
-      <span class="text-sm font-bold text-[#ff5555] block">⚠️ ДЕБАФФ: ВЫГОРАНИЕ РЕЦЕПТОРОВ</span>
-      <span class="text-xs text-[#ffaaaa]">Штраф: −50% к получаемому XP</span>
-    </div>
-
-    <!-- Полоса опыта XP -->
-    <div class="mb-4">
-      <div class="flex justify-between text-base font-bold text-[#222] mb-0.5">
-        <span>Шкала Опыта (XP)</span>
-        <span><span id="current-xp">0</span> / <span id="max-xp">100</span> XP</span>
-      </div>
-      <div class="mc-xp-bg h-4 w-full p-0.5">
-        <div id="xp-bar" class="mc-xp-fill h-full transition-all duration-200" style="width: 0%"></div>
-      </div>
-    </div>
-
-    <!-- Быстрый Контратак -->
-    <div class="mb-4">
-      <div class="text-base font-bold text-[#222] mb-1 uppercase">⚡ Быстрый Контратак (Переключение)</div>
-      <div class="grid grid-cols-2 gap-2">
-        <button onclick="triggerMacro('physical')" class="mc-button p-2 text-left">
-          <div class="text-sm font-bold mc-text-green">💪 Физика (+20 XP)</div>
-          <div class="text-xs text-[#eee]">20 отжиманий / лед</div>
+      <div class="flex justify-end space-x-3">
+        <button onclick="closeRelapseModal()" class="mc-btn bg-slate-400 text-slate-900 px-3 py-1.5 text-xs font-pixel">
+          CANCEL
         </button>
-        <button onclick="triggerMacro('mental')" class="mc-button p-2 text-left">
-          <div class="text-sm font-bold mc-text-aqua">🧠 Фокус (+20 XP)</div>
-          <div class="text-xs text-[#eee]">Перехват ЦНС / Книга</div>
+        <button onclick="confirmRelapse()" class="mc-btn mc-btn-red px-4 py-1.5 text-xs font-pixel text-white">
+          RESPAWN
         </button>
       </div>
     </div>
-
-    <!-- Квесты Созидания -->
-    <div class="mb-4">
-      <div class="text-base font-bold text-[#222] mb-1 uppercase">🎯 Квесты Созидания (Прокачка)</div>
-      <div class="space-y-1.5">
-        <label class="mc-slot flex items-center justify-between p-2 cursor-pointer hover:bg-[#999]">
-          <span class="text-base text-[#fff]">🏋️‍♂️ Силовая / Кардио</span>
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold mc-text-gold">+50 XP</span>
-            <input type="checkbox" onchange="toggleQuest(this, 50)" class="w-4 h-4 accent-[#55ff55]">
-          </div>
-        </label>
-        <label class="mc-slot flex items-center justify-between p-2 cursor-pointer hover:bg-[#999]">
-          <span class="text-base text-[#fff]">🧘‍♂️ 1 час работы в тишине</span>
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold mc-text-gold">+40 XP</span>
-            <input type="checkbox" onchange="toggleQuest(this, 40)" class="w-4 h-4 accent-[#55ff55]">
-          </div>
-        </label>
-        <label class="mc-slot flex items-center justify-between p-2 cursor-pointer hover:bg-[#999]">
-          <span class="text-base text-[#fff]">📖 Чтение книг (30 мин)</span>
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold mc-text-gold">+30 XP</span>
-            <input type="checkbox" onchange="toggleQuest(this, 30)" class="w-4 h-4 accent-[#55ff55]">
-          </div>
-        </label>
-      </div>
-    </div>
-
-    <!-- Нижняя панель -->
-    <div class="pt-2 border-t-2 border-[#555] flex justify-between items-center gap-2">
-      <button onclick="addCleanDay()" class="mc-button text-sm px-3 py-2 flex-1 font-bold">
-        ✅ Чистый День (+1 к Стрику)
-      </button>
-      <button onclick="triggerRelapse()" class="mc-button-danger text-sm px-3 py-2 flex-1 font-bold">
-        ⚠️ Зафиксировать Срыв
-      </button>
-    </div>
-
   </div>
 
   <script>
-    // JSONBin.io Настройки
-    const BIN_ID = "6ae4d805ac6210605a5f66f0"; 
-    const API_KEY = "$2a$10$zO6OXGmcu2KvGcO3IaTkRODmKt2zrnA/F9oJaKG3K2Te28jjW81yu";
+    // --- APP STATE & INITIALIZATION ---
+    const DEFAULT_STATE = {
+      level: 1,
+      xp: 0,
+      xpMax: 100,
+      streak: 0,
+      dopamine: 40,
+      focus: 50,
+      soundEnabled: true,
+      quests: [
+        { id: 'q_stalking', title: 'Zero Stalking / Zero Contact', xp: 30, completed: false },
+        { id: 'q_reels', title: 'Zero Shorts / TikTok / Reels', xp: 25, completed: false },
+        { id: 'q_shower', title: 'Cold Shower / Obsidian Discipline', xp: 20, completed: false },
+        { id: 'q_deepwork', title: '60 Min Deep Mining / Deep Work', xp: 35, completed: false }
+      ]
+    };
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playMcSound(type) {
+    let state = JSON.parse(localStorage.getItem('minecraft_rpg_state')) || DEFAULT_STATE;
+
+    // Web Audio Synthesizer (Minecraft retro chiptune style)
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playMinecraftSound(type) {
+      if (!state.soundEnabled) return;
       try {
+        initAudio();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
         gain.connect(audioCtx.destination);
 
-        if (type === 'xp') {
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
-          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.1);
-        } else if (type === 'mine') {
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(140, audioCtx.currentTime);
-          osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.15);
-          gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.15);
-        } else if (type === 'break') {
+        const now = audioCtx.currentTime;
+
+        if (type === 'click') {
           osc.type = 'square';
-          osc.frequency.setValueAtTime(90, audioCtx.currentTime);
-          osc.frequency.linearRampToValueAtTime(20, audioCtx.currentTime + 0.3);
-          gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.3);
+          osc.frequency.setValueAtTime(400, now);
+          osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } else if (type === 'xp') {
+          // Classic Minecraft XP pickup chime
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1046.5, now); // C6
+          osc.frequency.setValueAtTime(1318.5, now + 0.06); // E6
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+          osc.start(now);
+          osc.stop(now + 0.18);
         } else if (type === 'levelup') {
           osc.type = 'triangle';
-          osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-          osc.frequency.setValueAtTime(554.37, audioCtx.currentTime + 0.1);
-          osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.2);
-          osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.3);
-          gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.5);
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.1);
+          osc.frequency.setValueAtTime(783.99, now + 0.2);
+          osc.frequency.setValueAtTime(1046.50, now + 0.3);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        } else if (type === 'fail') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(180, now);
+          osc.frequency.exponentialRampToValueAtTime(50, now + 0.4);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+          osc.start(now);
+          osc.stop(now + 0.4);
         }
-      } catch(e) {}
-    }
-
-    let gameState = {
-      level: 1,
-      xp: 0,
-      maxXp: 100,
-      streak: 0,
-      hasDebuff: false,
-      debuffEndTime: 0
-    };
-
-    async function loadStateFromCloud() {
-      if (BIN_ID === "ВАШ_BIN_ID_ЗДЕСЬ") {
-        document.getElementById('sync-status').style.backgroundColor = '#ff5555';
-        return;
-      }
-      try {
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-          headers: { 'X-Master-Key': API_KEY }
-        });
-        const data = await response.json();
-        if (data && data.record) {
-          gameState = data.record;
-          updateUI();
-          document.getElementById('sync-status').style.backgroundColor = '#55ff55';
-        }
-      } catch(e) {
-        document.getElementById('sync-status').style.backgroundColor = '#ff5555';
+      } catch (e) {
+        console.log("Audio locked");
       }
     }
 
-    async function saveStateToCloud() {
-      if (BIN_ID === "ВАШ_BIN_ID_ЗДЕСЬ") return;
-      document.getElementById('sync-status').style.backgroundColor = '#ffff55';
-      try {
-        await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Master-Key': API_KEY
-          },
-          body: JSON.stringify(gameState)
-        });
-        document.getElementById('sync-status').style.backgroundColor = '#55ff55';
-      } catch(e) {
-        document.getElementById('sync-status').style.backgroundColor = '#ff5555';
-      }
+    function toggleAudio() {
+      state.soundEnabled = !state.soundEnabled;
+      document.getElementById('soundState').innerText = state.soundEnabled ? 'ON' : 'OFF';
+      document.getElementById('soundIcon').innerText = state.soundEnabled ? '🔊' : '🔇';
+      saveState();
+      if (state.soundEnabled) playMinecraftSound('click');
     }
 
-    function checkDebuff() {
-      if (gameState.hasDebuff && Date.now() > gameState.debuffEndTime) {
-        gameState.hasDebuff = false;
-      }
-    }
-
-    // ПОШАГОВОЕ РАЗРУШЕНИЕ КВАДРАТНЫМИ ТРЕЩИНАМИ И ВАШЕЙ КИРКОЙ
-    function triggerMinecraftBlockBreak() {
-      const overlay = document.getElementById('animation-overlay');
-      const pickaxe = document.getElementById('custom-pickaxe');
-      const mainGui = document.getElementById('main-gui');
-      const crackGrid = document.getElementById('block-cracks');
-      const banner = document.getElementById('levelup-banner');
-
-      overlay.classList.remove('hidden');
-      pickaxe.classList.remove('hidden');
-      crackGrid.style.opacity = '1';
-      banner.classList.add('hidden');
+    // --- UI RENDER ENGINE ---
+    function renderUI() {
+      document.getElementById('lvlDisplay').innerText = state.level;
+      document.getElementById('xpCurrent').innerText = state.xp;
+      document.getElementById('xpMax').innerText = state.xpMax;
       
-      pickaxe.classList.add('animate-mining');
-      mainGui.classList.add('animate-shake');
+      const xpPercent = Math.min(100, Math.max(0, (state.xp / state.xpMax) * 100));
+      document.getElementById('xpBar').style.width = `${xpPercent}%`;
 
-      let stage = 1;
-      const mineInterval = setInterval(() => {
-        if (stage <= 3) {
-          crackGrid.className = `mc-crack-grid crack-stage-${stage}`;
-          playMcSound('mine');
-          spawnBlockParticles();
-          stage++;
-        } else {
-          clearInterval(mineInterval);
-          
-          // ФИНАЛЬНЫЙ СКОЛ И УДАЛЕНИЕ БЛОКА
-          playMcSound('break');
-          pickaxe.classList.remove('animate-mining');
-          pickaxe.classList.add('hidden');
-          mainGui.classList.remove('animate-shake');
-          mainGui.classList.add('animate-shatter');
-          crackGrid.style.opacity = '0';
+      document.getElementById('streakDisplay').innerText = state.streak;
+      const streakPercent = Math.min(100, Math.max(5, (state.streak / 30) * 100));
+      document.getElementById('streakBar').style.width = `${streakPercent}%`;
 
-          setTimeout(() => {
-            document.getElementById('banner-level-num').innerText = gameState.level;
-            banner.classList.remove('hidden');
-            playMcSound('levelup');
+      let rankText = "HARDCORE SURVIVAL";
+      if (state.streak >= 30) rankText = "NETHERITE MASTER";
+      else if (state.streak >= 21) rankText = "DIAMOND ARMOR";
+      else if (state.streak >= 7) rankText = "IRON GEAR";
+      else if (state.streak >= 3) rankText = "STONE AGE";
+      document.getElementById('statusRank').innerText = rankText;
 
-            setTimeout(() => {
-              mainGui.classList.remove('animate-shatter');
-              overlay.classList.add('hidden');
-              crackGrid.className = 'mc-crack-grid';
-            }, 1600);
+      document.getElementById('dopamineVal').innerText = state.dopamine;
+      document.getElementById('dopamineBar').style.width = `${state.dopamine}%`;
 
-          }, 300);
-        }
-      }, 250);
+      document.getElementById('focusVal').innerText = state.focus;
+      document.getElementById('focusBar').style.width = `${state.focus}%`;
+
+      renderQuests();
     }
 
-    function spawnBlockParticles() {
-      const guiRect = document.getElementById('main-gui').getBoundingClientRect();
-      for (let i = 0; i < 6; i++) {
-        const p = document.createElement('div');
-        p.className = 'mc-particle';
-        p.style.left = (guiRect.left + Math.random() * guiRect.width) + 'px';
-        p.style.top = (guiRect.top + Math.random() * guiRect.height) + 'px';
-        document.body.appendChild(p);
+    function renderQuests() {
+      const container = document.getElementById('questContainer');
+      container.innerHTML = '';
+      let completedCount = 0;
 
-        const vx = (Math.random() - 0.5) * 140;
-        const vy = (Math.random() - 0.5) * 140;
+      state.quests.forEach(q => {
+        if (q.completed) completedCount++;
 
-        p.animate([
-          { transform: 'translate(0, 0)', opacity: 1 },
-          { transform: `translate(${vx}px, ${vy}px)`, opacity: 0 }
-        ], { duration: 350, easing: 'ease-out' }).onfinish = () => p.remove();
-      }
-    }
-
-    function addXP(amount) {
-      checkDebuff();
-      let finalXP = gameState.hasDebuff ? Math.floor(amount * 0.5) : amount;
-      gameState.xp += finalXP;
-      
-      playMcSound('xp');
-
-      if (gameState.xp >= gameState.maxXp) {
-        gameState.xp -= gameState.maxXp;
-        gameState.level += 1;
-        gameState.maxXp = Math.floor(gameState.maxXp * 1.3);
+        const questEl = document.createElement('div');
+        questEl.className = `flex items-center justify-between p-2 mc-dark-box ${q.completed ? 'opacity-50' : 'hover:border-mc-emerald'} transition-all`;
         
-        triggerMinecraftBlockBreak();
-      }
-      saveStateToCloud();
-      updateUI();
+        questEl.innerHTML = `
+          <label class="flex items-center space-x-2 cursor-pointer w-full">
+            <input type="checkbox" ${q.completed ? 'checked' : ''} onchange="toggleQuest('${q.id}', event)" class="w-4 h-4 accent-emerald-500 rounded-none bg-black border-mc-border cursor-pointer">
+            <span class="${q.completed ? 'line-through text-slate-500' : 'text-slate-200'}">${q.title}</span>
+          </label>
+          <span class="font-pixel text-[9px] text-mc-gold shrink-0 ml-2">+${q.xp} XP</span>
+        `;
+        container.appendChild(questEl);
+      });
+
+      document.getElementById('questProgressText').innerText = `${completedCount}/${state.quests.length} Completed`;
     }
 
-    function triggerMacro(type) {
-      addXP(20);
-    }
-
-    function toggleQuest(checkbox, xpAmount) {
-      if (checkbox.checked) {
-        addXP(xpAmount);
-      } else {
-        gameState.xp = Math.max(0, gameState.xp - xpAmount);
-        saveStateToCloud();
-        updateUI();
-      }
-    }
-
-    function addCleanDay() {
-      gameState.streak += 1;
-      playMcSound('xp');
-      saveStateToCloud();
-      updateUI();
-    }
-
-    function triggerRelapse() {
-      if (confirm("Зафиксировать срыв? Стрик будет сброшен, и активируется дебафф 'Выгорание рецепторов' (-50% XP) на 24 часа.")) {
-        gameState.streak = 0;
-        gameState.hasDebuff = true;
-        gameState.debuffEndTime = Date.now() + (24 * 60 * 60 * 1000);
-        playMcSound('break');
-        saveStateToCloud();
-        updateUI();
-      }
-    }
-
-    function updateUI() {
-      checkDebuff();
-      document.getElementById('player-level').innerText = gameState.level;
-      document.getElementById('streak-days').innerText = gameState.streak;
-      document.getElementById('current-xp').innerText = gameState.xp;
-      document.getElementById('max-xp').innerText = gameState.maxXp;
+    // --- GAME MECHANICS ---
+    function addXP(amount, event = null) {
+      state.xp += amount;
       
-      const xpPercent = Math.min(100, Math.floor((gameState.xp / gameState.maxXp) * 100));
-      document.getElementById('xp-bar').style.width = `${xpPercent}%`;
+      if (event) {
+        createParticle(`+${amount} XP`, event.clientX, event.clientY, '#55ff55');
+      }
 
-      const debuffBanner = document.getElementById('debuff-banner');
-      if (gameState.hasDebuff) {
-        debuffBanner.classList.remove('hidden');
+      if (state.xp >= state.xpMax) {
+        state.xp -= state.xpMax;
+        state.level += 1;
+        state.xpMax = Math.floor(state.xpMax * 1.25);
+        state.dopamine = Math.min(100, state.dopamine + 10);
+        state.focus = Math.min(100, state.focus + 10);
+        
+        playMinecraftSound('levelup');
+        showAchievementPopup(`LEVEL UP! LVL ${state.level}`);
       } else {
-        debuffBanner.classList.add('hidden');
+        playMinecraftSound('xp');
+      }
+
+      saveState();
+      renderUI();
+    }
+
+    function triggerMacro(type, xpVal, dopamineBoost, focusBoost, label) {
+      state.dopamine = Math.min(100, state.dopamine + dopamineBoost);
+      state.focus = Math.min(100, state.focus + focusBoost);
+      
+      const evt = window.event;
+      addXP(xpVal, evt);
+      showAchievementPopup(`Completed: ${label}`);
+    }
+
+    function triggerStreakWin() {
+      state.streak += 1;
+      const evt = window.event;
+      addXP(50, evt);
+      showAchievementPopup(`+1 DAY STREAK (RESTED)`);
+    }
+
+    function toggleQuest(id, event) {
+      const q = state.quests.find(x => x.id === id);
+      if (q) {
+        q.completed = !q.completed;
+        if (q.completed) {
+          addXP(q.xp, event);
+        } else {
+          state.xp = Math.max(0, state.xp - q.xp);
+          playMinecraftSound('click');
+        }
+        saveState();
+        renderUI();
       }
     }
 
-    loadStateFromCloud();
+    // --- RELAPSE / RESPAWN MODAL ---
+    function openRelapseModal() {
+      playMinecraftSound('click');
+      document.getElementById('relapseModal').classList.remove('hidden');
+    }
+
+    function closeRelapseModal() {
+      playMinecraftSound('click');
+      document.getElementById('relapseModal').classList.add('hidden');
+    }
+
+    function confirmRelapse() {
+      state.streak = 0;
+      state.dopamine = Math.max(10, state.dopamine - 30);
+      state.focus = Math.max(10, state.focus - 30);
+      state.quests.forEach(q => q.completed = false);
+
+      playMinecraftSound('fail');
+      saveState();
+      renderUI();
+      closeRelapseModal();
+      showAchievementPopup(`YOU DIED! STREAK RESET TO 0.`);
+    }
+
+    // --- ANIMATIONS & POPUPS (Minecraft Achievement Style) ---
+    function createParticle(text, x, y, color) {
+      const particle = document.createElement('div');
+      particle.className = 'xp-particle';
+      particle.innerText = text;
+      particle.style.color = color;
+      particle.style.left = `${x || window.innerWidth / 2}px`;
+      particle.style.top = `${(y || window.innerHeight / 2) - 20}px`;
+
+      document.body.appendChild(particle);
+      setTimeout(() => particle.remove(), 900);
+    }
+
+    function showAchievementPopup(msg) {
+      const notif = document.createElement('div');
+      notif.className = 'fixed top-4 left-1/2 -translate-x-1/2 mc-box px-4 py-2 text-slate-900 font-pixel text-[10px] z-50 glow-gold transition-all duration-300 flex items-center gap-2';
+      notif.innerHTML = `<span>🏆</span> <div><div class="text-amber-700 text-[8px]">ACHIEVEMENT GET!</div><div>${msg}</div></div>`;
+      document.body.appendChild(notif);
+
+      setTimeout(() => {
+        notif.style.opacity = '0';
+        setTimeout(() => notif.remove(), 300);
+      }, 2500);
+    }
+
+    function saveState() {
+      localStorage.setItem('minecraft_rpg_state', JSON.stringify(state));
+    }
+
+    window.onload = function() {
+      renderUI();
+    };
   </script>
 </body>
 </html>
