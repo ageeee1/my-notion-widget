@@ -117,6 +117,595 @@
       text-shadow: 2px 2px 0px #000;
     }
 
+    /* ORANGE-WHITE FLASH LEVEL UP ANIMATION (NO MODAL) */
+    @keyframes orangeWhiteFlash {
+      0% {
+        opacity: 0;
+      }
+      20% {
+        opacity: 0.75;
+        background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,140,0,0.8) 50%, rgba(255,69,0,0) 100%);
+      }
+      50% {
+        opacity: 0.5;
+        background: radial-gradient(circle, rgba(255,255,255,0.6) 0%, rgba(255,165,0,0.6) 60%, rgba(255,69,0,0) 100%);
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    .level-up-flash {
+      animation: orangeWhiteFlash 2s ease-out forwards;
+    }
+
+    /* AVATAR ORANGE-WHITE GLOW */
+    @keyframes avatarOrangeGlow {
+      0% {
+        box-shadow: 0 0 0px rgba(255, 140, 0, 0);
+        border-color: #373737;
+      }
+      30% {
+        box-shadow: 0 0 25px #ffffff, 0 0 40px #ff8c00;
+        border-color: #ffffff;
+      }
+      70% {
+        box-shadow: 0 0 15px #ff8c00;
+        border-color: #ff8c00;
+      }
+      100% {
+        box-shadow: 0 0 0px rgba(255, 140, 0, 0);
+        border-color: #373737;
+      }
+    }
+
+    .avatar-level-up {
+      animation: avatarOrangeGlow 2s ease-out forwards;
+    }
+
+    /* Glow utilities */
+    .glow-emerald { box-shadow: 0 0 10px rgba(85, 255, 85, 0.5); }
+    .glow-gold { box-shadow: 0 0 10px rgba(252, 194, 0, 0.5); }
+    .glow-diamond { box-shadow: 0 0 10px rgba(85, 255, 255, 0.5); }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #121216; }
+    ::-webkit-scrollbar-thumb { background: #3d3d4a; }
+  </style>
+</head>
+<body class="p-2 md:p-4 min-h-screen flex items-center justify-center">
+
+  <!-- Main Widget Container -->
+  <div id="widgetCard" class="w-full max-w-2xl mc-dark-box rounded-none p-4 relative z-10 text-slate-100 overflow-hidden">
+    
+    <!-- Full-card Orange/White Glow Flash Overlay -->
+    <div id="levelUpOverlay" class="absolute inset-0 pointer-events-none z-30 opacity-0"></div>
+
+    <!-- Top Bar Header: Character Profile -->
+    <div class="flex flex-wrap items-center justify-between border-b-2 border-mc-border pb-3 mb-4 gap-3 relative z-20">
+      <div class="flex items-center space-x-3">
+        <!-- Minecraft Head Frame -->
+        <div id="avatarContainer" class="relative w-14 h-14 bg-mc-bg mc-box flex items-center justify-center overflow-hidden shrink-0 transition-all duration-300">
+          <svg id="heroAvatar" class="w-10 h-10 text-mc-emerald transition-all duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="7" y="3" width="10" height="10" fill="#55ffff" opacity="0.3"/>
+            <rect x="9" y="5" width="2" height="2" fill="#ff5555"/>
+            <rect x="13" y="5" width="2" height="2" fill="#ff5555"/>
+            <path d="M6 13h12v8H6z" fill="#3b82f6"/>
+          </svg>
+        </div>
+
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-pixel text-[10px] text-mc-gold tracking-wider uppercase" id="heroTitle">SURVIVAL EXPERT</span>
+            <span class="font-pixel text-[10px] bg-mc-dark-box border border-mc-border px-1.5 py-0.5 text-mc-emerald">LVL <span id="lvlDisplay">1</span></span>
+          </div>
+          <p class="text-sm text-slate-400 font-vt tracking-wide">DIFFICULTY: <span id="statusRank" class="text-mc-emerald">HARDCORE SURVIVAL</span></p>
+        </div>
+      </div>
+
+      <!-- Sound Toggle -->
+      <div class="flex items-center space-x-2">
+        <button id="soundToggleBtn" onclick="toggleAudio()" class="mc-btn text-xs px-2.5 py-1 text-slate-200 font-pixel text-[9px] flex items-center gap-1">
+          <span id="soundIcon">🔊</span> AUDIO: <span id="soundState">ON</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN BARS SECTION -->
+    <div class="space-y-3 mb-5 relative z-20">
+      
+      <!-- XP Progress Bar -->
+      <div>
+        <div class="flex justify-between text-xs font-pixel mb-1">
+          <span class="text-mc-emerald flex items-center gap-1">🟩 EXPERIENCE ORB (XP)</span>
+          <span class="text-slate-300"><span id="xpCurrent">0</span> / <span id="xpMax">100</span> XP</span>
+        </div>
+        <div class="w-full bg-black h-4 border-2 border-mc-border p-0.5 relative">
+          <div id="xpBar" class="h-full bg-gradient-to-r from-emerald-700 to-mc-emerald glow-emerald transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Clean Streak -->
+      <div>
+        <div class="flex justify-between text-xs font-pixel mb-1">
+          <span class="text-mc-gold flex items-center gap-1">🛡️ CLEAN STREAK</span>
+          <span class="text-mc-gold font-bold"><span id="streakDisplay">0</span> DAYS</span>
+        </div>
+        <div class="w-full bg-black h-4 border-2 border-mc-border p-0.5 relative">
+          <div id="streakBar" class="h-full bg-gradient-to-r from-yellow-700 to-mc-gold glow-gold transition-all duration-300" style="width: 5%"></div>
+        </div>
+      </div>
+
+      <!-- Health & Food Bars Grid -->
+      <div class="grid grid-cols-2 gap-3 pt-1">
+        <div>
+          <div class="flex justify-between text-xs font-vt mb-1">
+            <span class="text-mc-heart">💖 RECEPTOR HEALTH</span>
+            <span class="text-red-300"><span id="dopamineVal">50</span>%</span>
+          </div>
+          <div class="w-full bg-black h-3 border-2 border-mc-border p-0.5">
+            <div id="dopamineBar" class="h-full bg-mc-heart transition-all duration-300 shadow-[0_0_8px_rgba(255,34,68,0.7)]" style="width: 50%"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs font-vt mb-1">
+            <span class="text-mc-diamond">⚡ MENTAL FOCUS</span>
+            <span class="text-cyan-300"><span id="focusVal">60</span>%</span>
+          </div>
+          <div class="w-full bg-black h-3 border-2 border-mc-border p-0.5">
+            <div id="focusBar" class="h-full bg-mc-diamond glow-diamond transition-all duration-300" style="width: 60%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MACRO QUICK-ACTIONS -->
+    <div class="mb-5 relative z-20">
+      <h3 class="font-pixel text-[10px] text-slate-300 mb-2.5 uppercase tracking-wider flex items-center gap-1">
+        <span>⚔️</span> Action Inventory (+XP)
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <button onclick="triggerMacro('mining', 25, 5, 10, 'Mining Session!')" class="mc-btn text-left p-2 text-slate-100 group">
+          <div class="text-lg mb-0.5">⛏️</div>
+          <div class="font-pixel text-[9px] text-mc-gold group-hover:text-white">MINING RESET</div>
+          <div class="text-xs text-slate-300 font-vt">+25 XP | +Focus</div>
+        </button>
+
+        <button onclick="triggerMacro('crafting', 20, 10, 5, 'Crafting Focus!')" class="mc-btn text-left p-2 text-slate-100 group">
+          <div class="text-lg mb-0.5">🪵</div>
+          <div class="font-pixel text-[9px] text-mc-diamond group-hover:text-white">CRAFTING FOCUS</div>
+          <div class="text-xs text-slate-300 font-vt">+20 XP | +Receptors</div>
+        </button>
+
+        <button onclick="triggerMacro('explore', 30, 15, 10, 'Nature Expedition!')" class="mc-btn text-left p-2 text-slate-100 group">
+          <div class="text-lg mb-0.5">🌲</div>
+          <div class="font-pixel text-[9px] text-mc-emerald group-hover:text-white">EXPEDITION</div>
+          <div class="text-xs text-slate-300 font-vt">+30 XP | Clean Mind</div>
+        </button>
+
+        <button onclick="triggerStreakWin()" class="mc-btn mc-btn-green text-left p-2 text-white group">
+          <div class="text-lg mb-0.5">🛏️</div>
+          <div class="font-pixel text-[9px] text-mc-emerald group-hover:text-white">+1 SLEEP DAY</div>
+          <div class="text-xs text-emerald-200 font-vt">+50 XP | +1 Streak</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- DAILY QUEST LOG -->
+    <div class="mb-5 relative z-20">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-pixel text-[10px] text-slate-300 uppercase tracking-wider flex items-center gap-1">
+          <span>📜</span> Daily Survival Quests
+        </h3>
+        <span class="text-xs font-vt text-slate-400" id="questProgressText">0/4 Completed</span>
+      </div>
+      <div class="space-y-1.5 font-vt text-base" id="questContainer"></div>
+    </div>
+
+    <!-- RELAPSE / FAIL EMERGENCY BUTTON -->
+    <div class="border-t border-mc-border pt-3 flex items-center justify-between relative z-20">
+      <div class="text-xs font-vt text-slate-400">Hardcore Death Protocol:</div>
+      <button onclick="openRelapseModal()" class="mc-btn mc-btn-red text-red-200 px-3 py-1.5 font-pixel text-[9px] flex items-center gap-1">
+        💀 RESPAWN / RESET STREAK
+      </button>
+    </div>
+
+  </div>
+
+  <!-- RELAPSE CONFIRMATION MODAL -->
+  <div id="relapseModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="mc-box max-w-md w-full p-5 text-slate-900 relative">
+      <h3 class="font-pixel text-red-700 text-xs mb-3 flex items-center gap-2">
+        <span>💀</span> YOU DIED!
+      </h3>
+      <p class="font-vt text-lg text-slate-800 mb-4">
+        Reporting a relapse will <strong class="text-red-700">reset your Clean Streak to Day 0</strong> and inflict a severe survival penalty.
+      </p>
+      <div class="bg-red-200 p-2 border-2 border-red-400 mb-4 text-xs font-vt text-red-900">
+        "Respawn successfully and rebuild your base from the ground up."
+      </div>
+      <div class="flex justify-end space-x-3">
+        <button onclick="closeRelapseModal()" class="mc-btn bg-slate-400 text-slate-900 px-3 py-1.5 text-xs font-pixel">CANCEL</button>
+        <button onclick="confirmRelapse()" class="mc-btn mc-btn-red px-4 py-1.5 text-xs font-pixel text-white">RESPAWN</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_STATE = {
+      level: 1,
+      xp: 0,
+      xpMax: 100,
+      streak: 0,
+      dopamine: 40,
+      focus: 50,
+      soundEnabled: true,
+      quests: [
+        { id: 'q_stalking', title: 'Zero Stalking / Zero Contact', xp: 30, completed: false },
+        { id: 'q_reels', title: 'Zero Shorts / TikTok / Reels', xp: 25, completed: false },
+        { id: 'q_shower', title: 'Cold Shower / Obsidian Discipline', xp: 20, completed: false },
+        { id: 'q_deepwork', title: '60 Min Deep Mining / Deep Work', xp: 35, completed: false }
+      ]
+    };
+
+    let state = JSON.parse(localStorage.getItem('minecraft_rpg_state')) || DEFAULT_STATE;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function playMinecraftSound(type) {
+      if (!state.soundEnabled) return;
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'click') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(400, now);
+          osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+          osc.start(now); osc.stop(now + 0.05);
+        } else if (type === 'xp') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1046.5, now);
+          osc.frequency.setValueAtTime(1318.5, now + 0.06);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+          osc.start(now); osc.stop(now + 0.18);
+        } else if (type === 'levelup') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.1);
+          osc.frequency.setValueAtTime(783.99, now + 0.2);
+          osc.frequency.setValueAtTime(1046.50, now + 0.3);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now); osc.stop(now + 0.5);
+        } else if (type === 'fail') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(180, now);
+          osc.frequency.exponentialRampToValueAtTime(50, now + 0.4);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+          osc.start(now); osc.stop(now + 0.4);
+        }
+      } catch (e) { console.log("Audio locked"); }
+    }
+
+    function toggleAudio() {
+      state.soundEnabled = !state.soundEnabled;
+      document.getElementById('soundState').innerText = state.soundEnabled ? 'ON' : 'OFF';
+      document.getElementById('soundIcon').innerText = state.soundEnabled ? '🔊' : '🔇';
+      saveState();
+      if (state.soundEnabled) playMinecraftSound('click');
+    }
+
+    function renderUI() {
+      document.getElementById('lvlDisplay').innerText = state.level;
+      document.getElementById('xpCurrent').innerText = state.xp;
+      document.getElementById('xpMax').innerText = state.xpMax;
+      
+      const xpPercent = Math.min(100, Math.max(0, (state.xp / state.xpMax) * 100));
+      document.getElementById('xpBar').style.width = `${xpPercent}%`;
+
+      document.getElementById('streakDisplay').innerText = state.streak;
+      const streakPercent = Math.min(100, Math.max(5, (state.streak / 30) * 100));
+      document.getElementById('streakBar').style.width = `${streakPercent}%`;
+
+      let rankText = "HARDCORE SURVIVAL";
+      if (state.streak >= 30) rankText = "NETHERITE MASTER";
+      else if (state.streak >= 21) rankText = "DIAMOND ARMOR";
+      else if (state.streak >= 7) rankText = "IRON GEAR";
+      else if (state.streak >= 3) rankText = "STONE AGE";
+      document.getElementById('statusRank').innerText = rankText;
+
+      document.getElementById('dopamineVal').innerText = state.dopamine;
+      document.getElementById('dopamineBar').style.width = `${state.dopamine}%`;
+
+      document.getElementById('focusVal').innerText = state.focus;
+      document.getElementById('focusBar').style.width = `${state.focus}%`;
+
+      renderQuests();
+    }
+
+    function renderQuests() {
+      const container = document.getElementById('questContainer');
+      container.innerHTML = '';
+      let completedCount = 0;
+
+      state.quests.forEach(q => {
+        if (q.completed) completedCount++;
+        const questEl = document.createElement('div');
+        questEl.className = `flex items-center justify-between p-2 mc-dark-box ${q.completed ? 'opacity-50' : 'hover:border-mc-emerald'} transition-all`;
+        questEl.innerHTML = `
+          <label class="flex items-center space-x-2 cursor-pointer w-full">
+            <input type="checkbox" ${q.completed ? 'checked' : ''} onchange="toggleQuest('${q.id}', event)" class="w-4 h-4 accent-emerald-500 rounded-none bg-black border-mc-border cursor-pointer">
+            <span class="${q.completed ? 'line-through text-slate-500' : 'text-slate-200'}">${q.title}</span>
+          </label>
+          <span class="font-pixel text-[9px] text-mc-gold shrink-0 ml-2">+${q.xp} XP</span>
+        `;
+        container.appendChild(questEl);
+      });
+      document.getElementById('questProgressText').innerText = `${completedCount}/${state.quests.length} Completed`;
+    }
+
+    function addXP(amount, event = null) {
+      state.xp += amount;
+      if (event) createParticle(`+${amount} XP`, event.clientX, event.clientY, '#55ff55');
+
+      if (state.xp >= state.xpMax) {
+        state.xp -= state.xpMax;
+        state.level += 1;
+        state.xpMax = Math.floor(state.xpMax * 1.25);
+        state.dopamine = Math.min(100, state.dopamine + 10);
+        state.focus = Math.min(100, state.focus + 10);
+        
+        playMinecraftSound('levelup');
+        triggerSeamlessLevelUpAnimation();
+      } else {
+        playMinecraftSound('xp');
+      }
+
+      saveState();
+      renderUI();
+    }
+
+    // БЕСШОВНАЯ ОРАНЖЕВО-БЕЛАЯ АНИМАЦИЯ НА 2 СЕКУНДЫ
+    function triggerSeamlessLevelUpAnimation() {
+      const overlay = document.getElementById('levelUpOverlay');
+      const avatarBox = document.getElementById('avatarContainer');
+
+      // Перезапуск анимации вспышки свечения
+      overlay.classList.remove('level-up-flash');
+      void overlay.offsetWidth; // Принудительный reflow
+      overlay.classList.add('level-up-flash');
+
+      // Перезапуск анимации свечения аватарки
+      avatarBox.classList.remove('avatar-level-up');
+      void avatarBox.offsetWidth;
+      avatarBox.classList.add('avatar-level-up');
+
+      // Всплывающее короткое уведомление в стиле Minecraft
+      showAchievementPopup(`LEVEL UP! LVL ${state.level}`);
+
+      // Автоматическая очистка классов по завершении 2 секунд
+      setTimeout(() => {
+        overlay.classList.remove('level-up-flash');
+        avatarBox.classList.remove('avatar-level-up');
+      }, 2000);
+    }
+
+    function triggerMacro(type, xpVal, dopamineBoost, focusBoost, label) {
+      state.dopamine = Math.min(100, state.dopamine + dopamineBoost);
+      state.focus = Math.min(100, state.focus + focusBoost);
+      const evt = window.event;
+      addXP(xpVal, evt);
+      showAchievementPopup(`Completed: ${label}`);
+    }
+
+    function triggerStreakWin() {
+      state.streak += 1;
+      const evt = window.event;
+      addXP(50, evt);
+      showAchievementPopup(`+1 DAY STREAK (RESTED)`);
+    }
+
+    function toggleQuest(id, event) {
+      const q = state.quests.find(x => x.id === id);
+      if (q) {
+        q.completed = !q.completed;
+        if (q.completed) {
+          addXP(q.xp, event);
+        } else {
+          state.xp = Math.max(0, state.xp - q.xp);
+          playMinecraftSound('click');
+        }
+        saveState();
+        renderUI();
+      }
+    }
+
+    function openRelapseModal() {
+      playMinecraftSound('click');
+      document.getElementById('relapseModal').classList.remove('hidden');
+    }
+
+    function closeRelapseModal() {
+      playMinecraftSound('click');
+      document.getElementById('relapseModal').classList.add('hidden');
+    }
+
+    function confirmRelapse() {
+      state.streak = 0;
+      state.dopamine = Math.max(10, state.dopamine - 30);
+      state.focus = Math.max(10, state.focus - 30);
+      state.quests.forEach(q => q.completed = false);
+
+      playMinecraftSound('fail');
+      saveState();
+      renderUI();
+      closeRelapseModal();
+      showAchievementPopup(`YOU DIED! STREAK RESET TO 0.`);
+    }
+
+    function createParticle(text, x, y, color) {
+      const particle = document.createElement('div');
+      particle.className = 'xp-particle';
+      particle.innerText = text;
+      particle.style.color = color;
+      particle.style.left = `${x || window.innerWidth / 2}px`;
+      particle.style.top = `${(y || window.innerHeight / 2) - 20}px`;
+      document.body.appendChild(particle);
+      setTimeout(() => particle.remove(), 900);
+    }
+
+    function showAchievementPopup(msg) {
+      const notif = document.createElement('div');
+      notif.className = 'fixed top-4 left-1/2 -translate-x-1/2 mc-box px-4 py-2 text-slate-900 font-pixel text-[10px] z-50 glow-gold transition-all duration-300 flex items-center gap-2';
+      notif.innerHTML = `<span>🏆</span> <div><div class="text-amber-700 text-[8px]">ACHIEVEMENT GET!</div><div>${msg}</div></div>`;
+      document.body.appendChild(notif);
+      setTimeout(() => {
+        notif.style.opacity = '0';
+        setTimeout(() => notif.remove(), 300);
+      }, 2500);
+    }
+
+    function saveState() {
+      localStorage.setItem('minecraft_rpg_state', JSON.stringify(state));
+    }
+
+    window.onload = function() {
+      renderUI();
+    };
+  </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Survival HUD & Character Leveling</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts for Retro Pixel Aesthetics -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            pixel: ['"Press Start 2P"', 'monospace'],
+            vt: ['"VT323"', 'monospace']
+          },
+          colors: {
+            mc: {
+              bg: '#121216',
+              card: '#1c1c24',
+              border: '#3d3d4a',
+              stone: '#8b8b8b',
+              darkStone: '#373737',
+              gold: '#fcc200',
+              emerald: '#55ff55',
+              diamond: '#55ffff',
+              redstone: '#ff5555',
+              heart: '#ff2244'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #0c0c0f;
+      color: #e0e0e0;
+      font-family: 'VT323', monospace;
+      font-size: 1.35rem;
+      user-select: none;
+      overflow-x: hidden;
+    }
+
+    /* Minecraft Inventory / GUI Box Style */
+    .mc-box {
+      background-color: #c6c6c6;
+      border: 3px solid #373737;
+      box-shadow: 
+        inset -3px -3px 0px 0px #555555,
+        inset 3px 3px 0px 0px #ffffff,
+        0 6px 20px rgba(0,0,0,0.7);
+    }
+
+    .mc-dark-box {
+      background-color: #181820;
+      border: 3px solid #3d3d4a;
+      box-shadow: 
+        inset -3px -3px 0px 0px #0c0c10,
+        inset 3px 3px 0px 0px #2e2e3a,
+        0 4px 15px rgba(0,0,0,0.5);
+    }
+
+    /* Classic Minecraft Button Bevel */
+    .mc-btn {
+      position: relative;
+      background-color: #707070;
+      border: 2px solid #373737;
+      box-shadow: inset -2px -2px 0px 0px #222222, inset 2px 2px 0px 0px #a0a0a0;
+      transition: all 0.05s ease;
+    }
+
+    .mc-btn:hover {
+      background-color: #7e7e7e;
+      box-shadow: inset -2px -2px 0px 0px #2a2a2a, inset 2px 2px 0px 0px #b5b5b5;
+    }
+
+    .mc-btn:active {
+      transform: translateY(2px);
+      box-shadow: inset -1px -1px 0px 0px #b5b5b5, inset 1px 1px 0px 0px #222222;
+    }
+
+    .mc-btn-green {
+      background-color: #3c8527;
+      box-shadow: inset -2px -2px 0px 0px #1e4213, inset 2px 2px 0px 0px #5cb83c;
+    }
+    .mc-btn-green:hover { background-color: #489b30; }
+
+    .mc-btn-red {
+      background-color: #9e2a2b;
+      box-shadow: inset -2px -2px 0px 0px #501515, inset 2px 2px 0px 0px #d94b4c;
+    }
+    .mc-btn-red:hover { background-color: #b83234; }
+
+    /* Floating XP Particle Animation */
+    @keyframes floatUpFade {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      50% { opacity: 0.9; transform: translateY(-25px) scale(1.1); }
+      100% { opacity: 0; transform: translateY(-50px) scale(0.9); }
+    }
+
+    .xp-particle {
+      position: absolute;
+      pointer-events: none;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      font-weight: bold;
+      z-index: 50;
+      animation: floatUpFade 0.9s cubic-bezier(0.22, 1, 0.36, 1) FORWARDS;
+      text-shadow: 2px 2px 0px #000;
+    }
+
     /* LEVEL UP SCREEN ANIMATION */
     @keyframes levelUpPop {
       0% { transform: scale(0.5) translateY(20px); opacity: 0; }
