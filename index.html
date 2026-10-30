@@ -2,6 +2,302 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --card-bg: #f7f6f3;
+      --text-color: #37352f;
+      --accent-color: #2eaadc;
+      --progress-bg: #e0e0e0;
+      --border-color: #e9e9e8;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #191919;
+        --card-bg: #202020;
+        --text-color: rgba(255, 255, 255, 0.81);
+        --accent-color: #2eaadc;
+        --progress-bg: #373737;
+        --border-color: #2f2f2f;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: transparent;
+      color: var(--text-color);
+      margin: 0;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      box-sizing: border-box;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      font-size: 32px;
+      background: rgba(46, 170, 220, 0.1);
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .title {
+      font-weight: 700;
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .level-badge {
+      font-size: 13px;
+      color: #787774;
+      margin-top: 2px;
+    }
+
+    .status-text {
+      font-size: 11px;
+      color: #9b9a97;
+      margin-top: 4px;
+    }
+
+    .progress-container {
+      margin: 16px 0;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .progress-bar-bg {
+      background-color: var(--progress-bg);
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      background-color: var(--accent-color);
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    button {
+      flex: 1;
+      border: none;
+      background-color: var(--accent-color);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button.reset-btn {
+      background-color: transparent;
+      color: #9b9a97;
+      border: 1px solid var(--border-color);
+      flex: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="header">
+      <div class="profile">
+        <div class="avatar" id="avatar">🧙‍♂️</div>
+        <div>
+          <div class="title" id="char-name">Герой Notion</div>
+          <div class="level-badge">Уровень <span id="level">1</span></div>
+          <div class="status-text" id="sync-status">Загрузка данных...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="progress-container">
+      <div class="progress-label">
+        <span>Прогресс XP</span>
+        <span><span id="current-xp">0</span> / <span id="max-xp">100</span> XP</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="btn-10" onclick="addXP(10)" disabled>+10 XP</button>
+      <button id="btn-25" onclick="addXP(25)" disabled>+25 XP</button>
+      <button id="btn-50" onclick="addXP(50)" disabled>+50 XP</button>
+      <button class="reset-btn" id="btn-reset" onclick="resetProgress()" title="Сбросить" disabled>↺</button>
+    </div>
+  </div>
+
+  <script>
+    const BIN_ID = "6ae4d805ac6210605a5f66f0";
+    const API_KEY = "$2a$10$zO6OXGmcu2KvGcO3IaTkRODmKt2zrnA/F9oJaKG3K2Te28jjW81yu";
+
+    let xp = 0;
+    let level = 1;
+    const avatars = ['🌱', '🧙‍♂️', '⚔️', '🛡️', '👑', '🌌'];
+
+    function getXpForNextLevel(lvl) {
+      return lvl * 100;
+    }
+
+    function updateUI() {
+      const maxXp = getXpForNextLevel(level);
+      const percentage = Math.min((xp / maxXp) * 100, 100);
+
+      document.getElementById('level').innerText = level;
+      document.getElementById('current-xp').innerText = xp;
+      document.getElementById('max-xp').innerText = maxXp;
+      document.getElementById('progress-fill').style.width = percentage + '%';
+
+      const avatarIndex = Math.min(Math.floor((level - 1) / 2), avatars.length - 1);
+      document.getElementById('avatar').innerText = avatars[avatarIndex];
+    }
+
+    function setButtonsEnabled(enabled) {
+      document.getElementById('btn-10').disabled = !enabled;
+      document.getElementById('btn-25').disabled = !enabled;
+      document.getElementById('btn-50').disabled = !enabled;
+      document.getElementById('btn-reset').disabled = !enabled;
+    }
+
+    // Загрузка данных из JSONBin.io при открытии
+    async function loadData() {
+      const statusEl = document.getElementById('sync-status');
+      try {
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+          headers: {
+            'X-Master-Key': API_KEY
+          }
+        });
+
+        if (!response.ok) throw new Error('Ошибка загрузки');
+
+        const data = await response.json();
+        if (data.record) {
+          xp = data.record.xp !== undefined ? data.record.xp : 0;
+          level = data.record.level !== undefined ? data.record.level : 1;
+        }
+
+        updateUI();
+        statusEl.innerText = 'Синхронизировано ✓';
+        setButtonsEnabled(true);
+      } catch (error) {
+        console.error(error);
+        statusEl.innerText = 'Ошибка сети ❌';
+        setButtonsEnabled(true);
+      }
+    }
+
+    // Сохранение данных в JSONBin.io при изменении
+    async function saveData() {
+      const statusEl = document.getElementById('sync-status');
+      statusEl.innerText = 'Сохранение...';
+      setButtonsEnabled(false);
+
+      try {
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': API_KEY
+          },
+          body: JSON.stringify({ xp: xp, level: level })
+        });
+
+        if (!response.ok) throw new Error('Ошибка сохранения');
+
+        statusEl.innerText = 'Синхронизировано ✓';
+      } catch (error) {
+        console.error(error);
+        statusEl.innerText = 'Ошибка сохранения ❌';
+      } finally {
+        setButtonsEnabled(true);
+      }
+    }
+
+    async function addXP(amount) {
+      xp += amount;
+      let maxXp = getXpForNextLevel(level);
+
+      while (xp >= maxXp) {
+        xp -= maxXp;
+        level++;
+        maxXp = getXpForNextLevel(level);
+      }
+
+      updateUI();
+      await saveData();
+    }
+
+    async function resetProgress() {
+      if (confirm("Сбросить весь прогресс?")) {
+        xp = 0;
+        level = 1;
+        updateUI();
+        await saveData();
+      }
+    }
+
+    // Запускаем загрузку
+    loadData();
+  </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Minecraft RPG Dashboard (Custom Pickaxe & Block Break)</title>
   <script src="https://cdn.tailwindcss.com"></script>
