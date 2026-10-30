@@ -1,9 +1,9 @@
-<!DOCTYPE1 html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RPG Панель Управления Персонажем</title>
+  <title>RPG Панель Управления Персонажем (Cloud Sync)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
   <style>
@@ -44,12 +44,15 @@
           🧙‍♂️
         </div>
         <div>
-          <h1 class="pixel-font text-xs text-indigo-400 tracking-wider">БИЛД: ЧИСТЫЙ РЕЖИМ</h1>
+          <h1 class="pixel-font text-[10px] text-indigo-400 tracking-wider">БИЛД: ЧИСТЫЙ РЕЖИМ</h1>
           <div class="text-lg text-slate-400">Уровень <span id="player-level" class="text-yellow-400 font-bold">1</span></div>
         </div>
       </div>
       <div class="text-right">
-        <div class="text-xs text-slate-500 uppercase">Стрик Чистоты</div>
+        <div class="text-xs text-slate-500 uppercase flex items-center gap-1 justify-end">
+          <span>Стрик Чистоты</span>
+          <span id="sync-status" class="w-2 h-2 rounded-full bg-yellow-500 inline-block" title="Синхронизация..."></span>
+        </div>
         <div class="pixel-font text-sm text-emerald-400"><span id="streak-days">0</span> ДНЕЙ</div>
       </div>
     </div>
@@ -94,21 +97,21 @@
           <span class="text-sm">🏋️‍♂️ Силовая / Кардио тренировка</span>
           <div class="flex items-center gap-2">
             <span class="text-xs text-yellow-500">+50 XP</span>
-            <input type="checkbox" onchange="toggleQuest(this, 50)" class="w-4 h-4 accent-indigo-500">
+            <input type="checkbox" id="quest-1" onchange="toggleQuest(this, 50)" class="w-4 h-4 accent-indigo-500">
           </div>
         </label>
         <label class="flex items-center justify-between p-2 bg-slate-950 border border-slate-800 rounded cursor-pointer hover:border-slate-700">
           <span class="text-sm">🧘‍♂️ 1 час работы/учебы в тишине</span>
           <div class="flex items-center gap-2">
             <span class="text-xs text-yellow-500">+40 XP</span>
-            <input type="checkbox" onchange="toggleQuest(this, 40)" class="w-4 h-4 accent-indigo-500">
+            <input type="checkbox" id="quest-2" onchange="toggleQuest(this, 40)" class="w-4 h-4 accent-indigo-500">
           </div>
         </label>
         <label class="flex items-center justify-between p-2 bg-slate-950 border border-slate-800 rounded cursor-pointer hover:border-slate-700">
           <span class="text-sm">📖 Чтение полезной литературы (30 мин)</span>
           <div class="flex items-center gap-2">
             <span class="text-xs text-yellow-500">+30 XP</span>
-            <input type="checkbox" onchange="toggleQuest(this, 30)" class="w-4 h-4 accent-indigo-500">
+            <input type="checkbox" id="quest-3" onchange="toggleQuest(this, 30)" class="w-4 h-4 accent-indigo-500">
           </div>
         </label>
       </div>
@@ -127,7 +130,10 @@
   </div>
 
   <script>
-    // Аудиодвижок на Web Audio API (Звуковые эффекты)
+    // НАСТРОЙКА ОБЛАЧНОГО ХРАНИЛИЩА (Замените на свои данные из JSONBin.io)
+    const BIN_ID = "6ae4d805ac6210605a5f66f0"; 
+    const API_KEY = "$2a$10$zO6OXGmcu2KvGcO3IaTkRODmKt2zrnA/F9oJaKG3K2Te28jjW81yu";
+
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSound(freq, type, duration) {
       try {
@@ -144,8 +150,7 @@
       } catch(e) {}
     }
 
-    // Состояние Игры
-    let gameState = JSON.parse(localStorage.getItem('rpg_notion_state')) || {
+    let gameState = {
       level: 1,
       xp: 0,
       maxXp: 100,
@@ -154,9 +159,44 @@
       debuffEndTime: 0
     };
 
-    function saveState() {
-      localStorage.setItem('rpg_notion_state', JSON.stringify(gameState));
-      updateUI();
+    // Функция загрузки данных из облака
+    async function loadStateFromCloud() {
+      if (BIN_ID === "ВАШ_BIN_ID_ЗДЕСЬ") {
+        document.getElementById('sync-status').style.backgroundColor = '#ef4444'; // Красный — не настроено
+        return;
+      }
+      try {
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+          headers: { 'X-Master-Key': API_KEY }
+        });
+        const data = await response.json();
+        if (data && data.record) {
+          gameState = data.record;
+          updateUI();
+          document.getElementById('sync-status').style.backgroundColor = '#10b981'; // Зеленый — синхронизировано
+        }
+      } catch(e) {
+        document.getElementById('sync-status').style.backgroundColor = '#ef4444';
+      }
+    }
+
+    // Функция сохранения данных в облако
+    async function saveStateToCloud() {
+      if (BIN_ID === "ВАШ_BIN_ID_ЗДЕСЬ") return;
+      document.getElementById('sync-status').style.backgroundColor = '#f59e0b'; // Желтый — сохранение
+      try {
+        await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': API_KEY
+          },
+          body: JSON.stringify(gameState)
+        });
+        document.getElementById('sync-status').style.backgroundColor = '#10b981'; // Зеленый — ок
+      } catch(e) {
+        document.getElementById('sync-status').style.backgroundColor = '#ef4444';
+      }
     }
 
     function checkDebuff() {
@@ -170,15 +210,16 @@
       let finalXP = gameState.hasDebuff ? Math.floor(amount * 0.5) : amount;
       gameState.xp += finalXP;
       
-      playSound(587.33, 'square', 0.15); // Звук XP
+      playSound(587.33, 'square', 0.15);
 
       if (gameState.xp >= gameState.maxXp) {
         gameState.xp -= gameState.maxXp;
         gameState.level += 1;
         gameState.maxXp = Math.floor(gameState.maxXp * 1.3);
-        playSound(880, 'triangle', 0.4); // Звук Level-Up
+        playSound(880, 'triangle', 0.4);
       }
-      saveState();
+      saveStateToCloud();
+      updateUI();
     }
 
     function triggerMacro(type) {
@@ -190,23 +231,26 @@
         addXP(xpAmount);
       } else {
         gameState.xp = Math.max(0, gameState.xp - xpAmount);
-        saveState();
+        saveStateToCloud();
+        updateUI();
       }
     }
 
     function addCleanDay() {
       gameState.streak += 1;
       playSound(523.25, 'sine', 0.2);
-      saveState();
+      saveStateToCloud();
+      updateUI();
     }
 
     function triggerRelapse() {
       if (confirm("Зафиксировать срыв? Стрик будет сброшен, и активируется дебафф 'Выгорание рецепторов' (-50% XP) на 24 часа.")) {
         gameState.streak = 0;
         gameState.hasDebuff = true;
-        gameState.debuffEndTime = Date.now() + (24 * 60 * 60 * 1000); // 24 часа
-        playSound(150, 'sawtooth', 0.5); // Звук срыва
-        saveState();
+        gameState.debuffEndTime = Date.now() + (24 * 60 * 60 * 1000);
+        playSound(150, 'sawtooth', 0.5);
+        saveStateToCloud();
+        updateUI();
       }
     }
 
@@ -228,8 +272,8 @@
       }
     }
 
-    // Инициализация при загрузке
-    updateUI();
+    // При открытии виджета подтягиваем свежие данные с сервера
+    loadStateFromCloud();
   </script>
 </body>
 </html>
