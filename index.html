@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minecraft RPG Dashboard (Exact Pickaxe & Destroy Animation)</title>
+  <title>Minecraft RPG Dashboard (Custom Pickaxe & Block Break)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
   <style>
@@ -71,7 +71,7 @@
       background-color: #c43d3d;
     }
 
-    /* Оригинальные тексты Minecraft без неонов */
+    /* Каноничные тексты без неона */
     .mc-text-green {
       color: #55ff55;
       text-shadow: 2px 2px 0px #00aa00;
@@ -89,7 +89,7 @@
       text-shadow: 1px 1px 0px #8b8b8b;
     }
 
-    /* Полоса опыта XP */
+    /* Шкала опыта XP */
     .mc-xp-bg {
       background-color: #112200;
       border: 2px solid #000000;
@@ -99,56 +99,73 @@
       box-shadow: inset 0 2px 0 #c0ff60, inset 0 -2px 0 #40a000;
     }
 
-    /* АНИМАЦИЯ КИРКИ И РАЗРУШЕНИЯ БЛОКА */
+    /* АНИМАЦИИ КИРКИ И ТРЯСКИ */
     @keyframes pickaxeMining {
       0% { transform: rotate(0deg) translate(0, 0); }
-      30% { transform: rotate(-70deg) translate(-10px, -20px); }
+      30% { transform: rotate(-65deg) translate(-15px, -25px); }
       70% { transform: rotate(15deg) translate(5px, 10px); }
       100% { transform: rotate(0deg) translate(0, 0); }
     }
 
     @keyframes guiShake {
       0% { transform: translate(0, 0); }
-      25% { transform: translate(-4px, 4px); }
-      50% { transform: translate(4px, -4px); }
-      75% { transform: translate(-4px, -2px); }
+      20% { transform: translate(-3px, 3px); }
+      40% { transform: translate(3px, -3px); }
+      60% { transform: translate(-3px, -2px); }
+      80% { transform: translate(2px, 3px); }
       100% { transform: translate(0, 0); }
     }
 
     @keyframes guiShatter {
       0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05) rotate(2deg); opacity: 0.8; }
-      100% { transform: scale(0.2) rotate(-15deg); opacity: 0; }
+      50% { transform: scale(1.04) rotate(1deg); opacity: 0.7; }
+      100% { transform: scale(0.1) rotate(-20deg); opacity: 0; }
     }
 
     .animate-mining {
-      animation: pickaxeMining 0.3s ease-in-out infinite;
+      animation: pickaxeMining 0.28s ease-in-out infinite;
     }
 
     .animate-shake {
-      animation: guiShake 0.15s ease-in-out infinite;
+      animation: guiShake 0.12s ease-in-out infinite;
     }
 
     .animate-shatter {
-      animation: guiShatter 0.4s ease-in forwards;
+      animation: guiShatter 0.35s ease-in forwards;
     }
 
-    /* Оверлей трещин блока (Block Crack Overlay) */
-    .destroy-stage {
+    /* КВАДРАТНЫЕ ТРЕЩИНЫ МАЙНКРАФТА (Пиксельная сетка разрушения) */
+    .mc-crack-grid {
       position: absolute;
       inset: 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
       pointer-events: none;
-      z-index: 40;
-      background-size: cover;
-      opacity: 0.8;
+      z-index: 45;
+      opacity: 0;
+      transition: opacity 0.1s;
     }
+    .mc-crack-pixel {
+      background-image: radial-gradient(circle, #000 60%, transparent 60%);
+      background-size: 6px 6px;
+      opacity: 0;
+    }
+    .crack-stage-1 .mc-crack-pixel:nth-child(3),
+    .crack-stage-1 .mc-crack-pixel-6,
+    .crack-stage-1 .mc-crack-pixel-10 { opacity: 0.6; }
+
+    .crack-stage-2 .mc-crack-pixel { opacity: 0.5; }
+    .crack-stage-2 .mc-crack-pixel:nth-child(odd) { opacity: 0.8; }
+
+    .crack-stage-3 .mc-crack-pixel { opacity: 0.9; }
 
     .mc-particle {
       position: absolute;
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       background-color: #8b8b8b;
-      border: 3px solid #373737;
+      border: 2px solid #222;
       pointer-events: none;
       z-index: 100;
     }
@@ -156,61 +173,32 @@
 </head>
 <body class="p-4 min-h-screen flex items-center justify-center relative">
 
-  <!-- АНИМАЦИОННЫЙ СЛОЙ -->
+  <!-- АНИМАЦИОННЫЙ ОВЕРЛЕЙ -->
   <div id="animation-overlay" class="fixed inset-0 pointer-events-none z-50 flex items-center justify-center hidden">
     
-    <!-- ТРЕЩИНЫ РАЗРУШЕНИЯ БЛОКА (Оверлей) -->
-    <svg id="crack-overlay" class="absolute w-full max-w-md h-full z-40 hidden" viewBox="0 0 100 100" preserveAspectRatio="none">
-      <path id="crack-path" d="" stroke="#000000" stroke-width="2" fill="none" opacity="0.7"/>
-    </svg>
+    <!-- ВАША ТОЧНАЯ КАРТИНКА КИРКИ ИЗ СКРИНШОТА -->
+    <img id="custom-pickaxe" src="https://i.ibb.co/6R55k27/Gemini-Generated-Image-bfs7fjbfs7fjbfs7.jpg" 
+         class="w-40 h-40 absolute z-50 object-contain drop-shadow-[0_10px_0_rgba(0,0,0,0.8)] hidden" alt="Minecraft Pickaxe">
 
-    <!-- ТОЧНАЯ АЛМАЗНАЯ КИРКА ИЗ КАРТИНКИ (Pixel-Art SVG) -->
-    <svg id="diamond-pickaxe" class="w-36 h-36 absolute z-50 drop-shadow-[0_8px_0_rgba(0,0,0,0.7)]" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Рукоятка (Коричневый древесный градиент) -->
-      <path d="M3 13H4V14H3V13Z" fill="#2D1B00"/>
-      <path d="M4 12H5V13H4V12Z" fill="#00D8FF"/>
-      <path d="M4 13H5V14H4V13Z" fill="#0080FF"/>
-      <path d="M4 11H5V12H4V11Z" fill="#8B4513"/>
-      <path d="M5 12H6V13H5V12Z" fill="#5C2E0B"/>
-      <path d="M5 10H6V11H5V10Z" fill="#8B4513"/>
-      <path d="M6 11H7V12H6V11Z" fill="#5C2E0B"/>
-      <path d="M6 9H7V10H6V9Z" fill="#8B4513"/>
-      <path d="M7 10H8V11H7V10Z" fill="#5C2E0B"/>
-      <path d="M7 8H8V9H7V8Z" fill="#8B4513"/>
-      <path d="M8 9H9V10H8V9Z" fill="#5C2E0B"/>
-      <path d="M8 7H9V8H8V7Z" fill="#8B4513"/>
-      <path d="M9 8H10V9H9V8Z" fill="#5C2E0B"/>
-      <!-- Алмазное лезвие (Светло-голубой, синий и ярко-голубой) -->
-      <path d="M5 2H9V3H5V2Z" fill="#00A2FF"/>
-      <path d="M5 3H8V4H5V3Z" fill="#00F0FF"/>
-      <path d="M6 1H9V2H6V1Z" fill="#00A2FF"/>
-      <path d="M7 0H10V1H7V0Z" fill="#0080FF"/>
-      <path d="M10 1H11V2H10V1Z" fill="#00F0FF"/>
-      <path d="M11 2H12V3H11V2Z" fill="#00F0FF"/>
-      <path d="M12 3H13V5H12V3Z" fill="#00A2FF"/>
-      <path d="M11 4H12V6H11V4Z" fill="#0080FF"/>
-      <path d="M10 5H11V7H10V5Z" fill="#003BFF"/>
-      <path d="M12 2H13V3H12V2Z" fill="#003BFF"/>
-      <path d="M11 3H12V4H11V3Z" fill="#D2F9FF"/>
-      <path d="M10 4H11V5H10V4Z" fill="#D2F9FF"/>
-      <path d="M9 5H10V7H9V5Z" fill="#00A2FF"/>
-      <path d="M9 3H10V5H9V3Z" fill="#8B4513"/>
-      <path d="M10 3H11V4H10V3Z" fill="#5C2E0B"/>
-      <path d="M8 5H9V7H8V5Z" fill="#00A2FF"/>
-      <path d="M7 6H8V8H7V6Z" fill="#0080FF"/>
-    </svg>
-
-    <!-- Баннер Achievement Level-Up -->
+    <!-- Achievement Banner -->
     <div id="levelup-banner" class="mc-gui-panel p-6 text-center shadow-2xl z-50 hidden">
       <div class="text-2xl font-bold mc-text-gold mb-1">ДОСТИЖЕНИЕ ПОЛУЧЕНО!</div>
       <div class="text-4xl font-bold mc-text-green mb-2">УРОВЕНЬ <span id="banner-level-num">2</span></div>
-      <div class="text-base text-[#1f1f1f] font-bold">НОВЫЙ УРОВЕНЬ РЕЦЕПТОРОВ РАЗБЛОКИРОВАН</div>
+      <div class="text-base text-[#1f1f1f] font-bold">НОВЫЕ ВОЗМОЖНОСТИ РАЗБЛОКИРОВАНЫ</div>
     </div>
   </div>
 
   <!-- ОСНОВНАЯ GUI ПАНЕЛЬ -->
   <div id="main-gui" class="mc-gui-panel w-full max-w-md p-4 relative">
     
+    <!-- КВАДРАТНЫЕ ТРЕЩИНЫ (Накладываются на меню при майнинге) -->
+    <div id="block-cracks" class="mc-crack-grid">
+      <div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div>
+      <div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div>
+      <div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div>
+      <div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div><div class="mc-crack-pixel"></div>
+    </div>
+
     <!-- Шапка инвентаря -->
     <div class="flex items-center justify-between mb-3 border-b-2 border-[#555] pb-2">
       <div class="flex items-center gap-3">
@@ -327,16 +315,16 @@
           osc.stop(audioCtx.currentTime + 0.1);
         } else if (type === 'mine') {
           osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-          osc.frequency.linearRampToValueAtTime(50, audioCtx.currentTime + 0.15);
-          gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+          osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+          osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
           gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
           osc.start();
           osc.stop(audioCtx.currentTime + 0.15);
         } else if (type === 'break') {
           osc.type = 'square';
-          osc.frequency.setValueAtTime(100, audioCtx.currentTime);
-          osc.frequency.linearRampToValueAtTime(30, audioCtx.currentTime + 0.3);
+          osc.frequency.setValueAtTime(90, audioCtx.currentTime);
+          osc.frequency.linearRampToValueAtTime(20, audioCtx.currentTime + 0.3);
           gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
           gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
           osc.start();
@@ -408,47 +396,41 @@
       }
     }
 
-    // АНИМАЦИЯ ПОШАГОВОГО РАЗРУШЕНИЯ БЛОКА КИРКОЙ
-    const crackPaths = [
-      "M 10 20 L 30 40 L 25 60 M 50 10 L 45 35 L 70 50",
-      "M 10 20 L 30 40 L 25 60 L 10 80 M 50 10 L 45 35 L 70 50 L 85 80 M 30 40 L 60 40",
-      "M 0 10 L 30 40 L 25 60 L 10 100 M 50 0 L 45 35 L 70 50 L 100 90 M 30 40 L 80 30 M 25 60 L 60 70",
-      "M 0 0 L 30 40 L 25 60 L 0 100 M 50 0 L 45 35 L 70 50 L 100 100 M 0 50 L 100 50 M 30 40 L 100 0 M 25 60 L 80 100"
-    ];
-
+    // ПОШАГОВОЕ РАЗРУШЕНИЕ КВАДРАТНЫМИ ТРЕЩИНАМИ И ВАШЕЙ КИРКОЙ
     function triggerMinecraftBlockBreak() {
       const overlay = document.getElementById('animation-overlay');
-      const pickaxe = document.getElementById('diamond-pickaxe');
+      const pickaxe = document.getElementById('custom-pickaxe');
       const mainGui = document.getElementById('main-gui');
-      const crackOverlay = document.getElementById('crack-overlay');
-      const crackPath = document.getElementById('crack-path');
+      const crackGrid = document.getElementById('block-cracks');
       const banner = document.getElementById('levelup-banner');
 
       overlay.classList.remove('hidden');
-      crackOverlay.classList.remove('hidden');
+      pickaxe.classList.remove('hidden');
+      crackGrid.style.opacity = '1';
       banner.classList.add('hidden');
+      
       pickaxe.classList.add('animate-mining');
       mainGui.classList.add('animate-shake');
 
-      let stage = 0;
+      let stage = 1;
       const mineInterval = setInterval(() => {
-        if (stage < crackPaths.length) {
-          crackPath.setAttribute('d', crackPaths[stage]);
+        if (stage <= 3) {
+          crackGrid.className = `mc-crack-grid crack-stage-${stage}`;
           playMcSound('mine');
           spawnBlockParticles();
           stage++;
         } else {
           clearInterval(mineInterval);
           
-          // ФИНАЛЬНЫЙ РАЗЛОМ БЛОКА
+          // ФИНАЛЬНЫЙ СКОЛ И УДАЛЕНИЕ БЛОКА
           playMcSound('break');
           pickaxe.classList.remove('animate-mining');
+          pickaxe.classList.add('hidden');
           mainGui.classList.remove('animate-shake');
           mainGui.classList.add('animate-shatter');
-          crackOverlay.classList.add('hidden');
+          crackGrid.style.opacity = '0';
 
           setTimeout(() => {
-            // Вылет баннера Level-Up
             document.getElementById('banner-level-num').innerText = gameState.level;
             banner.classList.remove('hidden');
             playMcSound('levelup');
@@ -456,7 +438,7 @@
             setTimeout(() => {
               mainGui.classList.remove('animate-shatter');
               overlay.classList.add('hidden');
-              crackPath.setAttribute('d', '');
+              crackGrid.className = 'mc-crack-grid';
             }, 1600);
 
           }, 300);
@@ -466,20 +448,20 @@
 
     function spawnBlockParticles() {
       const guiRect = document.getElementById('main-gui').getBoundingClientRect();
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 6; i++) {
         const p = document.createElement('div');
         p.className = 'mc-particle';
         p.style.left = (guiRect.left + Math.random() * guiRect.width) + 'px';
         p.style.top = (guiRect.top + Math.random() * guiRect.height) + 'px';
         document.body.appendChild(p);
 
-        const vx = (Math.random() - 0.5) * 150;
-        const vy = (Math.random() - 0.5) * 150;
+        const vx = (Math.random() - 0.5) * 140;
+        const vy = (Math.random() - 0.5) * 140;
 
         p.animate([
           { transform: 'translate(0, 0)', opacity: 1 },
           { transform: `translate(${vx}px, ${vy}px)`, opacity: 0 }
-        ], { duration: 400, easing: 'ease-out' }).onfinish = () => p.remove();
+        ], { duration: 350, easing: 'ease-out' }).onfinish = () => p.remove();
       }
     }
 
@@ -495,7 +477,6 @@
         gameState.level += 1;
         gameState.maxXp = Math.floor(gameState.maxXp * 1.3);
         
-        // Запуск ломания блока киркой
         triggerMinecraftBlockBreak();
       }
       saveStateToCloud();
