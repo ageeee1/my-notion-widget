@@ -91,17 +91,13 @@
       background-color: #3c8527;
       box-shadow: inset -2px -2px 0px 0px #1e4213, inset 2px 2px 0px 0px #5cb83c;
     }
-    .mc-btn-green:hover {
-      background-color: #489b30;
-    }
+    .mc-btn-green:hover { background-color: #489b30; }
 
     .mc-btn-red {
       background-color: #9e2a2b;
       box-shadow: inset -2px -2px 0px 0px #501515, inset 2px 2px 0px 0px #d94b4c;
     }
-    .mc-btn-red:hover {
-      background-color: #b83234;
-    }
+    .mc-btn-red:hover { background-color: #b83234; }
 
     /* Floating XP Particle Animation */
     @keyframes floatUpFade {
@@ -121,6 +117,22 @@
       text-shadow: 2px 2px 0px #000;
     }
 
+    /* LEVEL UP SCREEN ANIMATION */
+    @keyframes levelUpPop {
+      0% { transform: scale(0.5) translateY(20px); opacity: 0; }
+      50% { transform: scale(1.1) translateY(-5px); opacity: 1; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    @keyframes levelUpGlow {
+      0%, 100% { box-shadow: 0 0 20px rgba(252, 194, 0, 0.6), inset 0 0 15px rgba(252, 194, 0, 0.4); }
+      50% { box-shadow: 0 0 40px rgba(252, 194, 0, 0.9), inset 0 0 25px rgba(252, 194, 0, 0.7); }
+    }
+
+    .level-up-banner {
+      animation: levelUpPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, levelUpGlow 1.5s infinite ease-in-out;
+    }
+
     /* Glow utilities */
     .glow-emerald { box-shadow: 0 0 10px rgba(85, 255, 85, 0.5); }
     .glow-gold { box-shadow: 0 0 10px rgba(252, 194, 0, 0.5); }
@@ -133,16 +145,15 @@
 </head>
 <body class="p-2 md:p-4 min-h-screen flex items-center justify-center">
 
-  <!-- Main Widget Container (Minecraft Dark Inventory HUD) -->
+  <!-- Main Widget Container -->
   <div class="w-full max-w-2xl mc-dark-box rounded-none p-4 relative z-10 text-slate-100 overflow-hidden">
     
     <!-- Top Bar Header: Character Profile -->
     <div class="flex flex-wrap items-center justify-between border-b-2 border-mc-border pb-3 mb-4 gap-3">
       <div class="flex items-center space-x-3">
-        <!-- Minecraft Head / Avatar Frame -->
-        <div class="relative w-14 h-14 bg-mc-bg mc-box flex items-center justify-center overflow-hidden shrink-0">
+        <!-- Minecraft Head Frame -->
+        <div id="avatarContainer" class="relative w-14 h-14 bg-mc-bg mc-box flex items-center justify-center overflow-hidden shrink-0 transition-all duration-300">
           <svg id="heroAvatar" class="w-10 h-10 text-mc-emerald transition-all duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <!-- Steve / Diamond Armor Silhouette -->
             <rect x="7" y="3" width="10" height="10" fill="#55ffff" opacity="0.3"/>
             <rect x="9" y="5" width="2" height="2" fill="#ff5555"/>
             <rect x="13" y="5" width="2" height="2" fill="#ff5555"/>
@@ -170,7 +181,7 @@
     <!-- MAIN BARS SECTION -->
     <div class="space-y-3 mb-5">
       
-      <!-- XP Progress Bar (Minecraft XP Bar Style) -->
+      <!-- XP Progress Bar -->
       <div>
         <div class="flex justify-between text-xs font-pixel mb-1">
           <span class="text-mc-emerald flex items-center gap-1">🟩 EXPERIENCE ORB (XP)</span>
@@ -181,7 +192,7 @@
         </div>
       </div>
 
-      <!-- Clean Streak (Totem / Shield Bar) -->
+      <!-- Clean Streak -->
       <div>
         <div class="flex justify-between text-xs font-pixel mb-1">
           <span class="text-mc-gold flex items-center gap-1">🛡️ CLEAN STREAK</span>
@@ -192,9 +203,8 @@
         </div>
       </div>
 
-      <!-- Health (Receptor Health) & Food (Mental Focus) Bars Grid -->
+      <!-- Health & Food Bars Grid -->
       <div class="grid grid-cols-2 gap-3 pt-1">
-        <!-- Dopamine / Receptor Health (Hearts) -->
         <div>
           <div class="flex justify-between text-xs font-vt mb-1">
             <span class="text-mc-heart">💖 RECEPTOR HEALTH</span>
@@ -205,7 +215,6 @@
           </div>
         </div>
 
-        <!-- Mental Focus / Food Bar -->
         <div>
           <div class="flex justify-between text-xs font-vt mb-1">
             <span class="text-mc-diamond">⚡ MENTAL FOCUS</span>
@@ -218,13 +227,12 @@
       </div>
     </div>
 
-    <!-- MACRO QUICK-ACTIONS (MINECRAFT ITEM SLOTS) -->
+    <!-- MACRO QUICK-ACTIONS -->
     <div class="mb-5">
       <h3 class="font-pixel text-[10px] text-slate-300 mb-2.5 uppercase tracking-wider flex items-center gap-1">
         <span>⚔️</span> Action Inventory (+XP)
       </h3>
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        
         <button onclick="triggerMacro('mining', 25, 5, 10, 'Mining Session!')" class="mc-btn text-left p-2 text-slate-100 group">
           <div class="text-lg mb-0.5">⛏️</div>
           <div class="font-pixel text-[9px] text-mc-gold group-hover:text-white">MINING RESET</div>
@@ -248,7 +256,6 @@
           <div class="font-pixel text-[9px] text-mc-emerald group-hover:text-white">+1 SLEEP DAY</div>
           <div class="text-xs text-emerald-200 font-vt">+50 XP | +1 Streak</div>
         </button>
-
       </div>
     </div>
 
@@ -260,22 +267,32 @@
         </h3>
         <span class="text-xs font-vt text-slate-400" id="questProgressText">0/4 Completed</span>
       </div>
-
-      <div class="space-y-1.5 font-vt text-base" id="questContainer">
-        <!-- Daily Quests injected via JS -->
-      </div>
+      <div class="space-y-1.5 font-vt text-base" id="questContainer"></div>
     </div>
 
     <!-- RELAPSE / FAIL EMERGENCY BUTTON -->
     <div class="border-t border-mc-border pt-3 flex items-center justify-between">
-      <div class="text-xs font-vt text-slate-400">
-        Hardcore Death Protocol:
-      </div>
+      <div class="text-xs font-vt text-slate-400">Hardcore Death Protocol:</div>
       <button onclick="openRelapseModal()" class="mc-btn mc-btn-red text-red-200 px-3 py-1.5 font-pixel text-[9px] flex items-center gap-1">
         💀 RESPAWN / RESET STREAK
       </button>
     </div>
 
+  </div>
+
+  <!-- LEVEL UP MODAL OVERLAY (ANIMATED) -->
+  <div id="levelUpModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="mc-box level-up-banner max-w-sm w-full p-6 text-slate-900 text-center relative">
+      <div class="text-3xl mb-1">⭐</div>
+      <div class="font-pixel text-amber-600 text-xs mb-1">ACHIEVEMENT UNLOCKED!</div>
+      <div class="font-pixel text-slate-900 text-lg mb-3" id="levelUpTitle">LEVEL UP! (LVL 2)</div>
+      <p class="font-vt text-xl text-slate-800 mb-5">
+        Ваши навыки выживания выросли. Здоровье рецепторов и концентрация восстановлены!
+      </p>
+      <button onclick="closeLevelUpModal()" class="mc-btn mc-btn-green text-white px-6 py-2 text-xs font-pixel">
+        ПРОДОЛЖИТЬ ВЫЖИВАНИЕ
+      </button>
+    </div>
   </div>
 
   <!-- RELAPSE CONFIRMATION MODAL -->
@@ -288,21 +305,16 @@
         Reporting a relapse will <strong class="text-red-700">reset your Clean Streak to Day 0</strong> and inflict a severe survival penalty.
       </p>
       <div class="bg-red-200 p-2 border-2 border-red-400 mb-4 text-xs font-vt text-red-900">
-        "Respawn successfully and rebuild your base from the ground up. Every death makes you tougher."
+        "Respawn successfully and rebuild your base from the ground up."
       </div>
       <div class="flex justify-end space-x-3">
-        <button onclick="closeRelapseModal()" class="mc-btn bg-slate-400 text-slate-900 px-3 py-1.5 text-xs font-pixel">
-          CANCEL
-        </button>
-        <button onclick="confirmRelapse()" class="mc-btn mc-btn-red px-4 py-1.5 text-xs font-pixel text-white">
-          RESPAWN
-        </button>
+        <button onclick="closeRelapseModal()" class="mc-btn bg-slate-400 text-slate-900 px-3 py-1.5 text-xs font-pixel">CANCEL</button>
+        <button onclick="confirmRelapse()" class="mc-btn mc-btn-red px-4 py-1.5 text-xs font-pixel text-white">RESPAWN</button>
       </div>
     </div>
   </div>
 
   <script>
-    // --- APP STATE & INITIALIZATION ---
     const DEFAULT_STATE = {
       level: 1,
       xp: 0,
@@ -320,14 +332,10 @@
     };
 
     let state = JSON.parse(localStorage.getItem('minecraft_rpg_state')) || DEFAULT_STATE;
-
-    // Web Audio Synthesizer (Minecraft retro chiptune style)
     let audioCtx = null;
 
     function initAudio() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
     function playMinecraftSound(type) {
@@ -338,7 +346,6 @@
         const gain = audioCtx.createGain();
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-
         const now = audioCtx.currentTime;
 
         if (type === 'click') {
@@ -347,17 +354,14 @@
           osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
           gain.gain.setValueAtTime(0.1, now);
           gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
-          osc.start(now);
-          osc.stop(now + 0.05);
+          osc.start(now); osc.stop(now + 0.05);
         } else if (type === 'xp') {
-          // Classic Minecraft XP pickup chime
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(1046.5, now); // C6
-          osc.frequency.setValueAtTime(1318.5, now + 0.06); // E6
+          osc.frequency.setValueAtTime(1046.5, now);
+          osc.frequency.setValueAtTime(1318.5, now + 0.06);
           gain.gain.setValueAtTime(0.12, now);
           gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
-          osc.start(now);
-          osc.stop(now + 0.18);
+          osc.start(now); osc.stop(now + 0.18);
         } else if (type === 'levelup') {
           osc.type = 'triangle';
           osc.frequency.setValueAtTime(523.25, now);
@@ -366,20 +370,16 @@
           osc.frequency.setValueAtTime(1046.50, now + 0.3);
           gain.gain.setValueAtTime(0.2, now);
           gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
-          osc.start(now);
-          osc.stop(now + 0.5);
+          osc.start(now); osc.stop(now + 0.5);
         } else if (type === 'fail') {
           osc.type = 'sawtooth';
           osc.frequency.setValueAtTime(180, now);
           osc.frequency.exponentialRampToValueAtTime(50, now + 0.4);
           gain.gain.setValueAtTime(0.25, now);
           gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
-          osc.start(now);
-          osc.stop(now + 0.4);
+          osc.start(now); osc.stop(now + 0.4);
         }
-      } catch (e) {
-        console.log("Audio locked");
-      }
+      } catch (e) { console.log("Audio locked"); }
     }
 
     function toggleAudio() {
@@ -390,7 +390,6 @@
       if (state.soundEnabled) playMinecraftSound('click');
     }
 
-    // --- UI RENDER ENGINE ---
     function renderUI() {
       document.getElementById('lvlDisplay').innerText = state.level;
       document.getElementById('xpCurrent').innerText = state.xp;
@@ -426,10 +425,8 @@
 
       state.quests.forEach(q => {
         if (q.completed) completedCount++;
-
         const questEl = document.createElement('div');
         questEl.className = `flex items-center justify-between p-2 mc-dark-box ${q.completed ? 'opacity-50' : 'hover:border-mc-emerald'} transition-all`;
-        
         questEl.innerHTML = `
           <label class="flex items-center space-x-2 cursor-pointer w-full">
             <input type="checkbox" ${q.completed ? 'checked' : ''} onchange="toggleQuest('${q.id}', event)" class="w-4 h-4 accent-emerald-500 rounded-none bg-black border-mc-border cursor-pointer">
@@ -439,17 +436,12 @@
         `;
         container.appendChild(questEl);
       });
-
       document.getElementById('questProgressText').innerText = `${completedCount}/${state.quests.length} Completed`;
     }
 
-    // --- GAME MECHANICS ---
     function addXP(amount, event = null) {
       state.xp += amount;
-      
-      if (event) {
-        createParticle(`+${amount} XP`, event.clientX, event.clientY, '#55ff55');
-      }
+      if (event) createParticle(`+${amount} XP`, event.clientX, event.clientY, '#55ff55');
 
       if (state.xp >= state.xpMax) {
         state.xp -= state.xpMax;
@@ -459,7 +451,7 @@
         state.focus = Math.min(100, state.focus + 10);
         
         playMinecraftSound('levelup');
-        showAchievementPopup(`LEVEL UP! LVL ${state.level}`);
+        triggerLevelUpAnimation();
       } else {
         playMinecraftSound('xp');
       }
@@ -468,10 +460,26 @@
       renderUI();
     }
 
+    function triggerLevelUpAnimation() {
+      document.getElementById('levelUpTitle').innerText = `LEVEL UP! (LVL ${state.level})`;
+      document.getElementById('levelUpModal').classList.remove('hidden');
+
+      // Анимация свечения аватара персонажа
+      const avatarBox = document.getElementById('avatarContainer');
+      avatarBox.classList.add('glow-gold', 'border-amber-400');
+      setTimeout(() => {
+        avatarBox.classList.remove('glow-gold', 'border-amber-400');
+      }, 3000);
+    }
+
+    function closeLevelUpModal() {
+      playMinecraftSound('click');
+      document.getElementById('levelUpModal').classList.add('hidden');
+    }
+
     function triggerMacro(type, xpVal, dopamineBoost, focusBoost, label) {
       state.dopamine = Math.min(100, state.dopamine + dopamineBoost);
       state.focus = Math.min(100, state.focus + focusBoost);
-      
       const evt = window.event;
       addXP(xpVal, evt);
       showAchievementPopup(`Completed: ${label}`);
@@ -499,7 +507,6 @@
       }
     }
 
-    // --- RELAPSE / RESPAWN MODAL ---
     function openRelapseModal() {
       playMinecraftSound('click');
       document.getElementById('relapseModal').classList.remove('hidden');
@@ -523,7 +530,6 @@
       showAchievementPopup(`YOU DIED! STREAK RESET TO 0.`);
     }
 
-    // --- ANIMATIONS & POPUPS (Minecraft Achievement Style) ---
     function createParticle(text, x, y, color) {
       const particle = document.createElement('div');
       particle.className = 'xp-particle';
@@ -531,7 +537,6 @@
       particle.style.color = color;
       particle.style.left = `${x || window.innerWidth / 2}px`;
       particle.style.top = `${(y || window.innerHeight / 2) - 20}px`;
-
       document.body.appendChild(particle);
       setTimeout(() => particle.remove(), 900);
     }
@@ -541,7 +546,6 @@
       notif.className = 'fixed top-4 left-1/2 -translate-x-1/2 mc-box px-4 py-2 text-slate-900 font-pixel text-[10px] z-50 glow-gold transition-all duration-300 flex items-center gap-2';
       notif.innerHTML = `<span>🏆</span> <div><div class="text-amber-700 text-[8px]">ACHIEVEMENT GET!</div><div>${msg}</div></div>`;
       document.body.appendChild(notif);
-
       setTimeout(() => {
         notif.style.opacity = '0';
         setTimeout(() => notif.remove(), 300);
