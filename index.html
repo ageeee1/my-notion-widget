@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minecraft RPG Dashboard</title>
+  <title>Minecraft RPG Casino Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
   <style>
@@ -13,9 +13,10 @@
       color: #373737;
       user-select: none;
       image-rendering: pixelated;
+      overflow-x: hidden;
     }
 
-    /* Главное окно контейнера GUI Minecraft */
+    /* Панель GUI Minecraft */
     .mc-gui-panel {
       background-color: #c6c6c6;
       border-top: 4px solid #ffffff;
@@ -25,7 +26,7 @@
       box-shadow: 0 0 0 4px #000000;
     }
 
-    /* Стиль ячеек/слотов инвентаря */
+    /* Слоты инвентаря */
     .mc-slot {
       background-color: #8b8b8b;
       border-top: 3px solid #373737;
@@ -34,7 +35,7 @@
       border-bottom: 3px solid #ffffff;
     }
 
-    /* Классическая кнопка Minecraft */
+    /* Кнопка в стиле Minecraft */
     .mc-button {
       background-color: #999999;
       border-top: 3px solid #ffffff;
@@ -42,11 +43,10 @@
       border-right: 3px solid #373737;
       border-bottom: 3px solid #373737;
       color: #e0e0e0;
-      text-shadow: 2px 2px 0px #3f3f3f;
+      text-shadow: 2px 2px 0px #202020;
     }
     .mc-button:hover {
       background-color: #a8a8a8;
-      border-color: #ffffff #2a2a2a #2a2a2a #ffffff;
       color: #ffffa0;
     }
     .mc-button:active {
@@ -56,7 +56,21 @@
       border-bottom: 3px solid #ffffff;
     }
 
-    /* Кнопка срыва (Danger Button) */
+    /* Кнопка Казино / Сундука */
+    .mc-button-gold {
+      background-color: #c69400;
+      border-top: 3px solid #ffe866;
+      border-left: 3px solid #ffe866;
+      border-right: 3px solid #554000;
+      border-bottom: 3px solid #554000;
+      color: #ffffff;
+      text-shadow: 2px 2px 0px #372800;
+    }
+    .mc-button-gold:hover {
+      background-color: #e5ab00;
+    }
+
+    /* Опасная кнопка */
     .mc-button-danger {
       background-color: #a83232;
       border-top: 3px solid #ff6b6b;
@@ -66,19 +80,13 @@
       color: #ffffff;
       text-shadow: 2px 2px 0px #200000;
     }
-    .mc-button-danger:hover {
-      background-color: #c43d3d;
+
+    /* Текст Minecraft с тенью */
+    .mc-text-shadow {
+      text-shadow: 2px 2px 0px #000000;
     }
 
-    /* Текст в стиле Minecraft (с тенью) */
-    .mc-text {
-      text-shadow: 2px 2px 0px #202020;
-    }
-    .mc-text-dark {
-      text-shadow: 2px 2px 0px #a0a0a0;
-    }
-
-    /* Индикатор опыта (XP Bar Minecraft) */
+    /* Индикатор опыта (XP Bar) */
     .mc-xp-bg {
       background-color: #112200;
       border: 2px solid #000000;
@@ -87,29 +95,66 @@
       background-color: #80ff20;
       box-shadow: inset 0 2px 0 #c0ff60, inset 0 -2px 0 #40a000;
     }
+
+    /* Анимации Казино / Джекпота */
+    @keyframes float-up {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      50% { transform: translateY(-25px) scale(1.2); }
+      100% { opacity: 0; transform: translateY(-45px) scale(0.8); }
+    }
+    .floating-xp {
+      position: absolute;
+      animation: float-up 0.8s forwards ease-out;
+      pointer-events: none;
+      font-weight: bold;
+      color: #55ff55;
+      text-shadow: 2px 2px 0px #000;
+      font-size: 22px;
+      z-index: 50;
+    }
+
+    @keyframes slot-spin {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0); }
+    }
+    .spin-anim {
+      animation: slot-spin 0.1s infinite linear;
+    }
+
+    @keyframes levelup-flash {
+      0% { background-color: rgba(255, 215, 0, 0); }
+      50% { background-color: rgba(255, 215, 0, 0.3); }
+      100% { background-color: rgba(255, 215, 0, 0); }
+    }
+    .flash-active {
+      animation: levelup-flash 0.6s ease-out;
+    }
   </style>
 </head>
-<body class="p-4 min-h-screen flex items-center justify-center">
+<body id="body-bg" class="p-4 min-h-screen flex items-center justify-center">
 
   <!-- GUI ПАНЕЛЬ -->
-  <div class="mc-gui-panel w-full max-w-md p-4 relative">
+  <div class="mc-gui-panel w-full max-w-md p-4 relative overflow-hidden">
     
-    <!-- Шапка персонажа и стрик -->
+    <!-- Контейнер для вылетающих цифер ачивок/казино -->
+    <div id="popups-container"></div>
+
+    <!-- Шапка игрока -->
     <div class="flex items-center justify-between mb-3 border-b-2 border-[#555] pb-2">
       <div class="flex items-center gap-3">
-        <!-- Слот с книги или аватаркой -->
         <div class="mc-slot w-12 h-12 flex items-center justify-center text-2xl">
-          📖
+          📦
         </div>
         <div>
-          <div class="text-xl font-bold text-[#1f1f1f]">ИНВЕНТАРЬ ПЕРСОНАЖА</div>
+          <div class="text-xl font-bold text-[#1f1f1f]">ИНВЕНТАРЬ ИГРОКА</div>
           <div class="text-lg text-[#373737]">Уровень: <span id="player-level" class="text-[#00aa00] font-bold text-xl">1</span></div>
         </div>
       </div>
 
       <div class="text-right">
         <div class="text-xs text-[#555] flex items-center justify-end gap-1 font-bold">
-          <span>СИНХРОНИЗАЦИЯ</span>
+          <span>СЕТЬ</span>
           <span id="sync-status" class="w-2.5 h-2.5 rounded-full bg-yellow-500 border border-black"></span>
         </div>
         <div class="text-lg font-bold text-[#111]">СТРИК: <span id="streak-days" class="text-[#00aa00]">0</span> ДН</div>
@@ -118,14 +163,14 @@
 
     <!-- Дебафф баннер -->
     <div id="debuff-banner" class="hidden mb-3 p-2 bg-[#550000] border-2 border-[#ff0000] text-center text-white">
-      <span class="text-sm font-bold mc-text text-[#ff5555] block">⚠️ ДЕБАФФ: ВЫГОРАНИЕ РЕЦЕПТОРОВ</span>
-      <span class="text-xs text-[#ffaaaa]">Штраф: −50% к получаемому XP</span>
+      <span class="text-sm font-bold mc-text-shadow text-[#ff5555] block">⚠️ ЭФФЕКТ: ВЫГОРАНИЕ РЕЦЕПТОРОВ</span>
+      <span class="text-xs text-[#ffaaaa]">Штраф: −50% к выпадаемому XP</span>
     </div>
 
     <!-- Полоса опыта XP -->
     <div class="mb-4">
       <div class="flex justify-between text-base font-bold text-[#222] mb-0.5">
-        <span>Опыт (XP)</span>
+        <span>Сферы Опыта (XP)</span>
         <span><span id="current-xp">0</span> / <span id="max-xp">100</span></span>
       </div>
       <div class="mc-xp-bg h-4 w-full p-0.5">
@@ -133,16 +178,25 @@
       </div>
     </div>
 
+    <!-- Казино Рулетка Сундука -->
+    <div class="mb-4 p-2 mc-slot text-center">
+      <div class="text-xs text-[#fff] mc-text-shadow font-bold mb-1">🎰 РАЗДАТЧИК СОКРОВИЩ (1 РАЗ В ДЕНЬ)</div>
+      <div id="casino-slot" class="text-2xl my-1">💎 | 🗡️ | 🍎</div>
+      <button id="spin-btn" onclick="spinCasino()" class="mc-button-gold text-sm px-4 py-1.5 w-full font-bold">
+        КРУТИТЬ СУНДУК (+XP)
+      </button>
+    </div>
+
     <!-- Быстрый Контратак (Макросы) -->
     <div class="mb-4">
       <div class="text-base font-bold text-[#222] mb-1 uppercase">⚡ Быстрый Контратак</div>
       <div class="grid grid-cols-2 gap-2">
-        <button onclick="triggerMacro('physical')" class="mc-button p-2 text-left">
-          <div class="text-sm font-bold mc-text text-[#55ff55]">💪 Физика (+20 XP)</div>
+        <button onclick="triggerMacro(event, 'physical')" class="mc-button p-2 text-left relative">
+          <div class="text-sm font-bold mc-text-shadow text-[#55ff55]">💪 Физика (+20)</div>
           <div class="text-xs text-[#ddd]">20 отжиманий / вода</div>
         </button>
-        <button onclick="triggerMacro('mental')" class="mc-button p-2 text-left">
-          <div class="text-sm font-bold mc-text text-[#55ffff]">🧠 Фокус (+20 XP)</div>
+        <button onclick="triggerMacro(event, 'mental')" class="mc-button p-2 text-left relative">
+          <div class="text-sm font-bold mc-text-shadow text-[#55ffff]">🧠 Фокус (+20)</div>
           <div class="text-xs text-[#ddd]">Перехват ЦНС / Чтение</div>
         </button>
       </div>
@@ -153,24 +207,24 @@
       <div class="text-base font-bold text-[#222] mb-1 uppercase">🎯 Квесты Созидания</div>
       <div class="space-y-1.5">
         <label class="mc-slot flex items-center justify-between p-2 cursor-pointer hover:bg-[#999]">
-          <span class="text-base text-[#fff] mc-text">🏋️‍♂️ Силовая / Кардио</span>
+          <span class="text-base text-[#fff] mc-text-shadow">🏋️‍♂️ Тренировка в зале</span>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-[#ffff55] mc-text">+50 XP</span>
-            <input type="checkbox" onchange="toggleQuest(this, 50)" class="w-4 h-4 accent-[#55ff55]">
+            <span class="text-xs font-bold text-[#ffff55] mc-text-shadow">+50 XP</span>
+            <input type="checkbox" onchange="toggleQuest(event, this, 50)" class="w-4 h-4 accent-[#55ff55]">
           </div>
         </label>
         <label class="mc-slot flex items-center justify-between p-2 cursor-pointer hover:bg-[#999]">
-          <span class="text-base text-[#fff] mc-text">🧘‍♂️ 1 час работы в тишине</span>
+          <span class="text-base text-[#fff] mc-text-shadow">🧘‍♂️ 1 час работы в тишине</span>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-[#ffff55] mc-text">+40 XP</span>
-            <input type="checkbox" onchange="toggleQuest(this, 40)" class="w-4 h-4 accent-[#55ff55]">
+            <span class="text-xs font-bold text-[#ffff55] mc-text-shadow">+40 XP</span>
+            <input type="checkbox" onchange="toggleQuest(event, this, 40)" class="w-4 h-4 accent-[#55ff55]">
           </div>
         </label>
         <label class="mc-slot flex items-center justify-between p-2 cursor-pointer hover:bg-[#999]">
-          <span class="text-base text-[#fff] mc-text">📖 Чтение книг (30 мин)</span>
+          <span class="text-base text-[#fff] mc-text-shadow">📖 Чтение книг (30 мин)</span>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-[#ffff55] mc-text">+30 XP</span>
-            <input type="checkbox" onchange="toggleQuest(this, 30)" class="w-4 h-4 accent-[#55ff55]">
+            <span class="text-xs font-bold text-[#ffff55] mc-text-shadow">+30 XP</span>
+            <input type="checkbox" onchange="toggleQuest(event, this, 30)" class="w-4 h-4 accent-[#55ff55]">
           </div>
         </label>
       </div>
@@ -189,7 +243,6 @@
   </div>
 
   <script>
-    // JSONBin.io Настройки
     const BIN_ID = "6ae4d805ac6210605a5f66f0"; 
     const API_KEY = "$2a$10$zO6OXGmcu2KvGcO3IaTkRODmKt2zrnA/F9oJaKG3K2Te28jjW81yu";
 
@@ -215,8 +268,19 @@
       maxXp: 100,
       streak: 0,
       hasDebuff: false,
-      debuffEndTime: 0
+      debuffEndTime: 0,
+      lastSpin: 0
     };
+
+    function spawnXPPopup(x, y, text) {
+      const popup = document.createElement('div');
+      popup.className = 'floating-xp';
+      popup.innerText = text;
+      popup.style.left = `${x}px`;
+      popup.style.top = `${y}px`;
+      document.body.appendChild(popup);
+      setTimeout(() => popup.remove(), 800);
+    }
 
     async function loadStateFromCloud() {
       if (BIN_ID === "ВАШ_BIN_ID_ЗДЕСЬ") {
@@ -262,35 +326,72 @@
       }
     }
 
-    function addXP(amount) {
+    function addXP(amount, event = null) {
       checkDebuff();
       let finalXP = gameState.hasDebuff ? Math.floor(amount * 0.5) : amount;
       gameState.xp += finalXP;
       
       playSound(800, 'square', 0.1);
 
+      if (event) {
+        spawnXPPopup(event.clientX || window.innerWidth/2, event.clientY || window.innerHeight/2, `+${finalXP} XP`);
+      }
+
       if (gameState.xp >= gameState.maxXp) {
         gameState.xp -= gameState.maxXp;
         gameState.level += 1;
         gameState.maxXp = Math.floor(gameState.maxXp * 1.3);
-        playSound(1000, 'triangle', 0.3);
+        playSound(1000, 'triangle', 0.4);
+        
+        // Level up flash
+        document.getElementById('body-bg').classList.add('flash-active');
+        setTimeout(() => document.getElementById('body-bg').classList.remove('flash-active'), 600);
       }
       saveStateToCloud();
       updateUI();
     }
 
-    function triggerMacro(type) {
-      addXP(20);
+    function triggerMacro(event, type) {
+      addXP(20, event);
     }
 
-    function toggleQuest(checkbox, xpAmount) {
+    function toggleQuest(event, checkbox, xpAmount) {
       if (checkbox.checked) {
-        addXP(xpAmount);
+        addXP(xpAmount, event);
       } else {
         gameState.xp = Math.max(0, gameState.xp - xpAmount);
         saveStateToCloud();
         updateUI();
       }
+    }
+
+    function spinCasino() {
+      const now = Date.now();
+      if (now - (gameState.lastSpin || 0) < 86400000) {
+        alert("Сундук можно открывать только 1 раз в 24 часа!");
+        return;
+      }
+
+      const slot = document.getElementById('casino-slot');
+      slot.classList.add('spin-anim');
+      
+      let timer = setInterval(() => {
+        playSound(300 + Math.random()*400, 'square', 0.05);
+      }, 80);
+
+      setTimeout(() => {
+        clearInterval(timer);
+        slot.classList.remove('spin-anim');
+        
+        const rewards = [30, 50, 70, 100];
+        const icons = ['🗡️ | 💎 | 🗡️', '🍎 | 🍎 | 🍎', '💎 | 💎 | 💎', '👑 | 👑 | 👑'];
+        const rand = Math.floor(Math.random() * rewards.length);
+        
+        slot.innerText = icons[rand];
+        gameState.lastSpin = Date.now();
+        addXP(rewards[rand]);
+        playSound(1200, 'triangle', 0.3);
+      }, 1200);
     }
 
     function addCleanDay() {
