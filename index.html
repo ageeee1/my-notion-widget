@@ -75,7 +75,7 @@
         #mining-overlay {
             position: fixed;
             inset: 0;
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(0, 0, 0, 0.92);
             z-index: 9998;
             display: none;
             flex-direction: column;
@@ -84,18 +84,18 @@
             pointer-events: none;
         }
 
-        /* Анимация удара киркой */
+        /* Анимация удара киркой (плавная и долгая) */
         @keyframes pickaxeSwing {
-            0% { transform: translate(100px, 100px) rotate(-30deg); }
-            25% { transform: translate(-40px, -40px) rotate(45deg); }
-            35% { transform: translate(10px, 10px) rotate(-10deg); }
-            60% { transform: translate(-40px, -40px) rotate(45deg); }
-            75% { transform: translate(10px, 10px) rotate(-10deg); }
-            100% { transform: translate(100px, 100px) rotate(-30deg); }
+            0% { transform: translate(120px, 120px) rotate(-35deg); }
+            20% { transform: translate(-60px, -60px) rotate(50deg); }
+            35% { transform: translate(15px, 15px) rotate(-15deg); }
+            55% { transform: translate(-60px, -60px) rotate(50deg); }
+            70% { transform: translate(15px, 15px) rotate(-15deg); }
+            100% { transform: translate(120px, 120px) rotate(-35deg); }
         }
 
         .pickaxe-anim {
-            animation: pickaxeSwing 1.8s ease-in-out infinite;
+            animation: pickaxeSwing 1.2s ease-in-out infinite;
         }
 
         #mining-canvas {
@@ -111,20 +111,20 @@
 </head>
 <body class="p-4 selection:bg-[#f59e0b] selection:text-[#000]">
 
-    <!-- Canvas для отрисовки стадий трещин и частиц -->
+    <!-- Canvas для отрисовки белых паутинистых трещин -->
     <canvas id="mining-canvas"></canvas>
 
-    <!-- Оверлей с киркой и надписью LEVEL UP -->
+    <!-- Оверлей с увеличенной в 3 раза киркой и надписью LEVEL UP -->
     <div id="mining-overlay">
         <div class="relative flex flex-col items-center">
-            <h1 id="levelup-title" class="text-2xl md:text-4xl text-[#f59e0b] tracking-wider mb-8 drop-shadow-[4px_4px_0px_#000] text-center">
+            <h1 id="levelup-title" class="text-2xl md:text-5xl text-[#f59e0b] tracking-wider mb-10 drop-shadow-[5px_5px_0px_#000] text-center">
                 LEVEL UP!
             </h1>
-            <!-- Пиксельная кирка по вашей ссылке -->
+            <!-- Увеличенная пиксельная кирка (в 3 раза больше) -->
             <img src="https://i.postimg.cc/XvZvbdHL/Gemini-Generated-Image-bfs7fjbfs7fjbfs7.jpg" 
-                 class="w-32 h-32 md:w-48 md:h-48 object-contain pickaxe-anim drop-shadow-2xl" 
+                 class="w-[360px] h-[360px] md:w-[540px] md:h-[540px] object-contain pickaxe-anim drop-shadow-2xl" 
                  alt="Pickaxe">
-            <p class="text-[8px] text-[#888888] mt-8 uppercase tracking-widest">[ MINING NEXT LEVEL... ]</p>
+            <p class="text-[9px] text-[#888888] mt-10 uppercase tracking-widest">[ MINING NEXT LEVEL... ]</p>
         </div>
     </div>
 
@@ -265,7 +265,7 @@
 
         let currentModalType = 'positive';
 
-        // --- CANVAS МАЙНИНГ И СТАДИИ ТРЕЩИН КАК В МАЙНКРАФТЕ ---
+        // --- CANVAS БЕЛЫЕ ПАУТИНИСТЫЕ ТРЕЩИНЫ ---
         const canvas = document.getElementById('mining-canvas');
         const ctx = canvas.getContext('2d');
 
@@ -276,37 +276,56 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Процедурная генерация пиксельных трещин (стадии от 1 до 8 по образу вашего референса)
-        function drawMinecraftCracks(stage) {
+        // Процедурная генерация белых паутинистых трещин
+        function drawWhiteWebCracks(stage) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const panels = document.querySelectorAll('.mc-panel');
 
-            panels.forEach(panel => {
+            panels.forEach((panel, panelIdx) => {
                 const rect = panel.getBoundingClientRect();
                 ctx.save();
                 ctx.translate(rect.left, rect.top);
 
-                // Рисуем сетку качественных пиксельных трещин в стиле Minecraft
-                ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
-                const step = Math.max(4, Math.floor(20 - stage * 2));
-                
-                // Создаем узор трещин на основе стадии (0-8)
-                let seed = stage * 13;
-                for (let x = 0; x < rect.width; x += step) {
-                    for (let y = 0; y < rect.height; y += step) {
-                        // Псевдослучайный паттерн трещин
-                        let val = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
-                        val = val - Math.floor(val);
-                        
-                        if (val < (stage * 0.12)) {
-                            // Рисуем пиксельный скол/трещину
-                            ctx.fillRect(x, y, 4, 4);
-                            ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
-                            ctx.fillRect(x + 1, y + 1, 2, 2);
-                            ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+                // Белый цвет трещин с тенью для контраста
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+                ctx.lineWidth = 2;
+                ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+                ctx.shadowBlur = 5;
+
+                const cx = rect.width / 2;
+                const cy = rect.height / 2;
+                const branches = Math.min(stage * 2, 18);
+
+                for (let i = 0; i < branches; i++) {
+                    let angle = (i * Math.PI * 2) / branches + (panelIdx * 0.4);
+                    let length = (rect.width * 0.12) * stage;
+                    
+                    let x = cx + Math.cos(angle) * (rect.width * 0.08);
+                    let y = cy + Math.sin(angle) * (rect.height * 0.08);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+
+                    let currentX = x;
+                    let currentY = y;
+                    let segments = 4 + Math.floor(stage / 2);
+                    
+                    for (let s = 0; s < segments; s++) {
+                        let stepLen = length / segments;
+                        angle += (Math.sin(s * 2 + i) * 0.6); // Паутинистое ветвление
+                        currentX += Math.cos(angle) * stepLen;
+                        currentY += Math.sin(angle) * stepLen;
+                        ctx.lineTo(currentX, currentY);
+
+                        // Перекрестные паутинные нити
+                        if (stage >= 3 && s > 0 && s % 2 === 0) {
+                            ctx.moveTo(currentX, currentY);
+                            ctx.lineTo(currentX + (Math.sin(s) * 35), currentY + (Math.cos(s) * 35));
                         }
                     }
+                    ctx.stroke();
                 }
+
                 ctx.restore();
             });
         }
@@ -318,37 +337,36 @@
             overlay.style.display = 'flex';
 
             let currentStage = 1;
-            const maxStages = 8;
+            const maxStages = 10; // Больше стадий для долгой анимации
             
-            // Анимация стадий разрушения (от 1 до 8 как в Minecraft)
+            // Длительная анимация стадий (интервал 300мс -> общая длительность ~3-4 секунды)
             const interval = setInterval(() => {
-                drawMinecraftCracks(currentStage);
+                drawWhiteWebCracks(currentStage);
                 currentStage++;
 
                 if (currentStage > maxStages) {
                     clearInterval(interval);
-                    // Эффект разрушения: разлет частиц блоков
-                    triggerBlockParticles();
+                    triggerWhiteWebParticles();
                 }
-            }, 250); // Обновление стадии каждые 250мс (общая длительность около 2 сек)
+            }, 320); 
         }
 
-        function triggerBlockParticles() {
+        function triggerWhiteWebParticles() {
             let particles = [];
             const panels = document.querySelectorAll('.mc-panel');
 
             panels.forEach(panel => {
                 const rect = panel.getBoundingClientRect();
-                for (let i = 0; i < 30; i++) {
+                for (let i = 0; i < 35; i++) {
                     particles.push({
                         x: rect.left + Math.random() * rect.width,
                         y: rect.top + Math.random() * rect.height,
-                        size: Math.floor(Math.random() * 10) + 6,
-                        vx: (Math.random() - 0.5) * 20,
-                        vy: (Math.random() - 0.5) * 20 - 4,
+                        size: Math.floor(Math.random() * 8) + 4,
+                        vx: (Math.random() - 0.5) * 22,
+                        vy: (Math.random() - 0.5) * 22 - 5,
                         life: 1.0,
-                        decay: Math.random() * 0.03 + 0.01,
-                        color: ['#141414', '#2a2a2a', '#f59e0b', '#ffffff'][Math.floor(Math.random() * 4)]
+                        decay: Math.random() * 0.02 + 0.008,
+                        color: ['#ffffff', '#fefae0', '#d4a373', '#2a2a2a'][Math.floor(Math.random() * 4)]
                     });
                 }
             });
@@ -362,7 +380,7 @@
                         active = true;
                         p.x += p.vx;
                         p.y += p.vy;
-                        p.vy += 0.4; // гравитация
+                        p.vy += 0.35; // гравитация
                         p.life -= p.decay;
 
                         ctx.fillStyle = p.color;
@@ -438,7 +456,7 @@
             const newLevel = Math.floor(state.xp / 100) + 1;
             state.level = newLevel;
 
-            // Если уровень повысился — запускаем анимацию майнинга киркой и трещин!
+            // Если уровень повысился — запускаем долгую анимацию майнинга белой паутиной
             if (newLevel > oldLevel) {
                 triggerMiningAnimation(newLevel);
             }
