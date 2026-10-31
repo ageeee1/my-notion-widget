@@ -71,6 +71,619 @@
             box-shadow: inset 0px 3px 0px #fbbf24;
         }
 
+        /* Оверлей анимации майнинга киркой */
+        #mining-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 9998;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        /* Анимация удара киркой */
+        @keyframes pickaxeSwing {
+            0% { transform: translate(100px, 100px) rotate(-30deg); }
+            25% { transform: translate(-40px, -40px) rotate(45deg); }
+            35% { transform: translate(10px, 10px) rotate(-10deg); }
+            60% { transform: translate(-40px, -40px) rotate(45deg); }
+            75% { transform: translate(10px, 10px) rotate(-10deg); }
+            100% { transform: translate(100px, 100px) rotate(-30deg); }
+        }
+
+        .pickaxe-anim {
+            animation: pickaxeSwing 1.8s ease-in-out infinite;
+        }
+
+        #mining-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body class="p-4 selection:bg-[#f59e0b] selection:text-[#000]">
+
+    <!-- Canvas для отрисовки стадий трещин и частиц -->
+    <canvas id="mining-canvas"></canvas>
+
+    <!-- Оверлей с киркой и надписью LEVEL UP -->
+    <div id="mining-overlay">
+        <div class="relative flex flex-col items-center">
+            <h1 id="levelup-title" class="text-2xl md:text-4xl text-[#f59e0b] tracking-wider mb-8 drop-shadow-[4px_4px_0px_#000] text-center">
+                LEVEL UP!
+            </h1>
+            <!-- Пиксельная кирка по вашей ссылке -->
+            <img src="https://i.postimg.cc/XvZvbdHL/Gemini-Generated-Image-bfs7fjbfs7fjbfs7.jpg" 
+                 class="w-32 h-32 md:w-48 md:h-48 object-contain pickaxe-anim drop-shadow-2xl" 
+                 alt="Pickaxe">
+            <p class="text-[8px] text-[#888888] mt-8 uppercase tracking-widest">[ MINING NEXT LEVEL... ]</p>
+        </div>
+    </div>
+
+    <!-- Главный Контейнер Интерфейса -->
+    <div id="main-app" class="max-w-5xl mx-auto space-y-6">
+
+        <!-- Верхняя Панель -->
+        <header id="header-panel" class="mc-panel p-5 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-[#d97706] border-4 border-black flex items-center justify-center font-bold text-black text-xl">
+                    XP
+                </div>
+                <div>
+                    <h1 class="text-sm md:text-base text-[#f59e0b] tracking-wider">DOPAMINE LAB</h1>
+                    <p id="sync-status" class="text-[9px] text-[#888888] mt-2">
+                        [SYNCING WITH JSONBIN...]
+                    </p>
+                </div>
+            </div>
+
+            <!-- Уровень и XP -->
+            <div class="flex items-center gap-4 bg-[#0a0a0a] p-4 border-2 border-[#2a2a2a]">
+                <div class="text-center pr-2 border-r-2 border-[#2a2a2a]">
+                    <span class="text-[9px] text-[#888888] block">LVL</span>
+                    <span id="level-display" class="text-xl font-bold text-[#ffffff]">1</span>
+                </div>
+                <div class="w-48 sm:w-64">
+                    <div class="flex justify-between text-[8px] mb-2 text-[#cccccc]">
+                        <span>XP PROGRESS</span>
+                        <span id="xp-text">0 / 100</span>
+                    </div>
+                    <div class="mc-progress-bg h-5 w-full p-0.5">
+                        <div id="xp-bar" class="mc-progress-fill h-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Основная Сетка -->
+        <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <!-- Левая колонка: Действия -->
+            <div class="md:col-span-2 space-y-6">
+                
+                <!-- Позитивные Действия -->
+                <section id="pos-panel" class="mc-panel p-5">
+                    <div class="flex justify-between items-center mb-4 border-b-2 border-[#222222] pb-3">
+                        <h2 class="text-xs text-[#f59e0b]">
+                            <i class="fa-solid fa-plus-square mr-2"></i>[+] DO DOFAMINE
+                        </h2>
+                        <button onclick="openModal('positive')" class="mc-button mc-button-yellow text-[9px] px-3 py-2">
+                            + NEW
+                        </button>
+                    </div>
+                    <div id="positive-list" class="space-y-3">
+                        <!-- JS-рендеринг -->
+                    </div>
+                </section>
+
+                <!-- Негативные Действия -->
+                <section id="neg-panel" class="mc-panel p-5">
+                    <div class="flex justify-between items-center mb-4 border-b-2 border-[#222222] pb-3">
+                        <h2 class="text-xs text-[#ffffff]">
+                            <i class="fa-solid fa-minus-square mr-2"></i>[-] PENALTY (LOSE XP)
+                        </h2>
+                        <button onclick="openModal('negative')" class="mc-button bg-[#222222] text-[#ffffff] text-[9px] px-3 py-2 border-4 border-black">
+                            + NEW
+                        </button>
+                    </div>
+                    <div id="negative-list" class="space-y-3">
+                        <!-- JS-рендеринг -->
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Правая колонка: Стрики -->
+            <div>
+                <section id="streak-panel" class="mc-panel p-5">
+                    <div class="flex justify-between items-center mb-4 border-b-2 border-[#222222] pb-3">
+                        <h2 class="text-xs text-[#f59e0b]">
+                            <i class="fa-solid fa-fire mr-1"></i>STREAKS
+                        </h2>
+                        <button onclick="openModal('streak')" class="mc-button mc-button-orange text-[9px] px-2 py-2">
+                            + TASK
+                        </button>
+                    </div>
+                    <div id="streaks-list" class="space-y-4">
+                        <!-- JS-рендеринг -->
+                    </div>
+                </section>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Модальное Окно Добавления Задач -->
+    <div id="action-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+        <div class="mc-panel max-w-sm w-full p-6 space-y-4">
+            <h3 id="modal-title" class="text-xs text-[#f59e0b]">ADD ITEM</h3>
+            
+            <div>
+                <label class="block text-[8px] text-[#888888] mb-2">TITLE</label>
+                <input type="text" id="modal-name" class="w-full bg-[#000000] border-2 border-[#333333] p-2 text-[10px] text-white focus:outline-none focus:border-[#f59e0b]" placeholder="EX: NO PORN / READ BOOK">
+            </div>
+
+            <div id="modal-xp-container">
+                <label class="block text-[8px] text-[#888888] mb-2" id="modal-xp-label">XP VALUE</label>
+                <input type="number" id="modal-xp" class="w-full bg-[#000000] border-2 border-[#333333] p-2 text-[10px] text-white focus:outline-none focus:border-[#f59e0b]" value="50">
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal()" class="mc-button bg-[#333333] text-white text-[9px] px-3 py-2">CANCEL</button>
+                <button onclick="saveNewAction()" class="mc-button mc-button-yellow text-[9px] px-3 py-2">SAVE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BIN_ID = "6ae4d805ac6210605a5f66f0";
+        const API_KEY = "$2a$10$zO6OXGmcu2KvGcO3IaTkRODmKt2zrnA/F9oJaKG3K2Te28jjW81yu";
+
+        let state = {
+            xp: 0,
+            level: 1,
+            positiveActions: [
+                { id: 'p1', name: 'WORKOUT', xp: 40 },
+                { id: 'p2', name: 'READ BOOK 30M', xp: 20 }
+            ],
+            negativeActions: [
+                { id: 'n1', name: 'PORN / RELAPSE', xp: -80 },
+                { id: 'n2', name: 'DOOMSCROLLING', xp: -30 }
+            ],
+            streaks: [
+                { id: 's1', name: 'NO PORN / ABSTINENCE', streak: 0, lastDate: null }
+            ]
+        };
+
+        let currentModalType = 'positive';
+
+        // --- CANVAS МАЙНИНГ И СТАДИИ ТРЕЩИН КАК В МАЙНКРАФТЕ ---
+        const canvas = document.getElementById('mining-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Процедурная генерация пиксельных трещин (стадии от 1 до 8 по образу вашего референса)
+        function drawMinecraftCracks(stage) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const panels = document.querySelectorAll('.mc-panel');
+
+            panels.forEach(panel => {
+                const rect = panel.getBoundingClientRect();
+                ctx.save();
+                ctx.translate(rect.left, rect.top);
+
+                // Рисуем сетку качественных пиксельных трещин в стиле Minecraft
+                ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+                const step = Math.max(4, Math.floor(20 - stage * 2));
+                
+                // Создаем узор трещин на основе стадии (0-8)
+                let seed = stage * 13;
+                for (let x = 0; x < rect.width; x += step) {
+                    for (let y = 0; y < rect.height; y += step) {
+                        // Псевдослучайный паттерн трещин
+                        let val = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
+                        val = val - Math.floor(val);
+                        
+                        if (val < (stage * 0.12)) {
+                            // Рисуем пиксельный скол/трещину
+                            ctx.fillRect(x, y, 4, 4);
+                            ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+                            ctx.fillRect(x + 1, y + 1, 2, 2);
+                            ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+                        }
+                    }
+                }
+                ctx.restore();
+            });
+        }
+
+        function triggerMiningAnimation(newLevel) {
+            const overlay = document.getElementById('mining-overlay');
+            const title = document.getElementById('levelup-title');
+            title.innerText = `LEVEL UP! [LVL ${newLevel}]`;
+            overlay.style.display = 'flex';
+
+            let currentStage = 1;
+            const maxStages = 8;
+            
+            // Анимация стадий разрушения (от 1 до 8 как в Minecraft)
+            const interval = setInterval(() => {
+                drawMinecraftCracks(currentStage);
+                currentStage++;
+
+                if (currentStage > maxStages) {
+                    clearInterval(interval);
+                    // Эффект разрушения: разлет частиц блоков
+                    triggerBlockParticles();
+                }
+            }, 250); // Обновление стадии каждые 250мс (общая длительность около 2 сек)
+        }
+
+        function triggerBlockParticles() {
+            let particles = [];
+            const panels = document.querySelectorAll('.mc-panel');
+
+            panels.forEach(panel => {
+                const rect = panel.getBoundingClientRect();
+                for (let i = 0; i < 30; i++) {
+                    particles.push({
+                        x: rect.left + Math.random() * rect.width,
+                        y: rect.top + Math.random() * rect.height,
+                        size: Math.floor(Math.random() * 10) + 6,
+                        vx: (Math.random() - 0.5) * 20,
+                        vy: (Math.random() - 0.5) * 20 - 4,
+                        life: 1.0,
+                        decay: Math.random() * 0.03 + 0.01,
+                        color: ['#141414', '#2a2a2a', '#f59e0b', '#ffffff'][Math.floor(Math.random() * 4)]
+                    });
+                }
+            });
+
+            function animateParticles() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let active = false;
+
+                particles.forEach(p => {
+                    if (p.life > 0) {
+                        active = true;
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.vy += 0.4; // гравитация
+                        p.life -= p.decay;
+
+                        ctx.fillStyle = p.color;
+                        ctx.globalAlpha = Math.max(0, p.life);
+                        ctx.fillRect(Math.floor(p.x), Math.floor(p.y), p.size, p.size);
+                    }
+                });
+
+                if (active) {
+                    requestAnimationFrame(animateParticles);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    document.getElementById('mining-overlay').style.display = 'none';
+                }
+            }
+
+            animateParticles();
+        }
+
+        // --- JSONBIN LOGIC ---
+        async function loadData() {
+            const statusEl = document.getElementById('sync-status');
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                    headers: { 'X-Master-Key': API_KEY }
+                });
+                if (!response.ok) throw new Error('ERR');
+                const data = await response.json();
+                if (data.record) {
+                    state = data.record;
+                    if(!state.positiveActions) state.positiveActions = [];
+                    if(!state.negativeActions) state.negativeActions = [];
+                    if(!state.streaks) state.streaks = [];
+                }
+                render();
+                statusEl.innerText = '[STATUS: ONLINE / SYNCED]';
+                statusEl.style.color = '#f59e0b';
+            } catch (error) {
+                render();
+                statusEl.innerText = '[STATUS: OFFLINE MODE]';
+                statusEl.style.color = '#888888';
+            }
+        }
+
+        async function saveData() {
+            const statusEl = document.getElementById('sync-status');
+            statusEl.innerText = '[SAVING TO CLOUD...]';
+            statusEl.style.color = '#ffffff';
+
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': API_KEY
+                    },
+                    body: JSON.stringify(state)
+                });
+                if (!response.ok) throw new Error('ERR');
+                statusEl.innerText = '[STATUS: SAVED]';
+                statusEl.style.color = '#f59e0b';
+            } catch (error) {
+                statusEl.innerText = '[SAVE ERROR]';
+                statusEl.style.color = '#ffffff';
+            }
+        }
+
+        function addXP(amount) {
+            const oldLevel = Math.floor(state.xp / 100) + 1;
+            state.xp += amount;
+            if (state.xp < 0) state.xp = 0;
+
+            const newLevel = Math.floor(state.xp / 100) + 1;
+            state.level = newLevel;
+
+            // Если уровень повысился — запускаем анимацию майнинга киркой и трещин!
+            if (newLevel > oldLevel) {
+                triggerMiningAnimation(newLevel);
+            }
+
+            render();
+            saveData();
+        }
+
+        function checkStreak(id) {
+            const today = new Date().toISOString().split('T')[0];
+            const streakObj = state.streaks.find(s => s.id === id);
+            if (!streakObj) return;
+
+            if (streakObj.lastDate === today) {
+                alert('ALREADY CHECKED TODAY!');
+                return;
+            }
+
+            if (streakObj.lastDate) {
+                const last = new Date(streakObj.lastDate);
+                const now = new Date(today);
+                const diffTime = Math.abs(now - last);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays === 1) {
+                    streakObj.streak += 1;
+                } else if (diffDays > 1) {
+                    streakObj.streak = 1;
+                }
+            } else {
+                streakObj.streak = 1;
+            }
+
+            streakObj.lastDate = today;
+            addXP(20);
+            render();
+            saveData();
+        }
+
+        function resetStreak(id) {
+            if (!confirm('RELAPSE CONFIRMED? STREAK WILL BE RESET.')) return;
+            const streakObj = state.streaks.find(s => s.id === id);
+            if (streakObj) {
+                streakObj.streak = 0;
+                streakObj.lastDate = null;
+                addXP(-50);
+                render();
+                saveData();
+            }
+        }
+
+        function openModal(type) {
+            currentModalType = type;
+            const modal = document.getElementById('action-modal');
+            const title = document.getElementById('modal-title');
+            const xpContainer = document.getElementById('modal-xp-container');
+            
+            document.getElementById('modal-name').value = '';
+            
+            if (type === 'streak') {
+                title.innerText = 'NEW STREAK TASK';
+                xpContainer.style.display = 'none';
+            } else {
+                title.innerText = type === 'positive' ? 'NEW POSITIVE ACTION' : 'NEW PENALTY ACTION';
+                xpContainer.style.display = 'block';
+                document.getElementById('modal-xp').value = type === 'positive' ? '30' : '-50';
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('action-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function saveNewAction() {
+            const name = document.getElementById('modal-name').value.trim();
+            if (!name) return alert('ENTER TITLE!');
+
+            const newId = 'id_' + Math.random().toString(36).substr(2, 9);
+
+            if (currentModalType === 'streak') {
+                state.streaks.push({ id: newId, name, streak: 0, lastDate: null });
+            } else {
+                let xp = parseInt(document.getElementById('modal-xp').value) || 10;
+                if (currentModalType === 'negative' && xp > 0) xp = -Math.abs(xp);
+                if (currentModalType === 'positive' && xp < 0) xp = Math.abs(xp);
+
+                if (currentModalType === 'positive') {
+                    state.positiveActions.push({ id: newId, name, xp });
+                } else {
+                    state.negativeActions.push({ id: newId, name, xp });
+                }
+            }
+
+            closeModal();
+            render();
+            saveData();
+        }
+
+        function deleteItem(type, id) {
+            if(!confirm('DELETE ITEM?')) return;
+            if (type === 'positive') state.positiveActions = state.positiveActions.filter(i => i.id !== id);
+            if (type === 'negative') state.negativeActions = state.negativeActions.filter(i => i.id !== id);
+            if (type === 'streak') state.streaks = state.streaks.filter(i => i.id !== id);
+            render();
+            saveData();
+        }
+
+        function render() {
+            document.getElementById('level-display').innerText = state.level;
+            const currentXPInLevel = state.xp % 100;
+            document.getElementById('xp-text').innerText = `${currentXPInLevel} / 100`;
+            document.getElementById('xp-bar').style.width = `${currentXPInLevel}%`;
+
+            // Positives
+            document.getElementById('positive-list').innerHTML = state.positiveActions.map(item => `
+                <div class="bg-[#0a0a0a] p-3 border-2 border-[#222222] flex justify-between items-center group">
+                    <div>
+                        <h4 class="text-[9px] text-[#ffffff]">${item.name}</h4>
+                        <span class="text-[8px] text-[#f59e0b]">+${item.xp} XP</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="addXP(${item.xp})" class="mc-button mc-button-yellow text-[8px] px-2 py-1">DONE</button>
+                        <button onclick="deleteItem('positive', '${item.id}')" class="text-[#666666] hover:text-white text-[8px] px-1">[X]</button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Negatives
+            document.getElementById('negative-list').innerHTML = state.negativeActions.map(item => `
+                <div class="bg-[#0a0a0a] p-3 border-2 border-[#222222] flex justify-between items-center group">
+                    <div>
+                        <h4 class="text-[9px] text-[#ffffff]">${item.name}</h4>
+                        <span class="text-[8px] text-[#888888]">${item.xp} XP</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="addXP(${item.xp})" class="mc-button bg-[#222222] text-white text-[8px] px-2 py-1 border-2 border-black">FAIL</button>
+                        <button onclick="deleteItem('negative', '${item.id}')" class="text-[#666666] hover:text-white text-[8px] px-1">[X]</button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Streaks
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('streaks-list').innerHTML = state.streaks.map(item => {
+                const checkedToday = item.lastDate === today;
+                return `
+                    <div class="bg-[#0a0a0a] p-3 border-2 border-[#222222] space-y-2">
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-[9px] text-[#ffffff]">${item.name}</h4>
+                            <button onclick="deleteItem('streak', '${item.id}')" class="text-[#666666] hover:text-white text-[8px]">[X]</button>
+                        </div>
+                        <p class="text-[8px] text-[#f59e0b]">STREAK: ${item.streak} DAYS</p>
+                        <div class="flex gap-2">
+                            <button onclick="checkStreak('${item.id}')" ${checkedToday ? 'disabled' : ''} class="mc-button ${checkedToday ? 'bg-[#222222] text-[#555555]' : 'mc-button-orange'} text-[8px] px-2 py-1.5 flex-1">
+                                ${checkedToday ? 'DONE TODAY' : 'CHECK IN (+XP)'}
+                            </button>
+                            <button onclick="resetStreak('${item.id}')" class="mc-button bg-[#000000] text-white text-[8px] px-2 py-1.5" title="Reset Streak">
+                                RESET
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        loadData();
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOPAMINE MINECRAFT SYSTEM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Press Start 2P', monospace;
+            image-rendering: pixelated;
+        }
+
+        body {
+            background-color: #080808;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Minecraft Pixel Style Borders */
+        .mc-panel {
+            background-color: #141414;
+            border: 4px solid #000;
+            box-shadow: 
+                inset -4px -4px 0px 0px #0a0a0a,
+                inset 4px 4px 0px 0px #2a2a2a;
+            position: relative;
+        }
+
+        .mc-button {
+            border: 4px solid #000;
+            box-shadow: 
+                inset -3px -3px 0px 0px #1a1a1a,
+                inset 3px 3px 0px 0px #555555;
+            transition: transform 0.05s;
+        }
+
+        .mc-button:active {
+            box-shadow: 
+                inset 3px 3px 0px 0px #1a1a1a,
+                inset -3px -3px 0px 0px #555555;
+            transform: translate(2px, 2px);
+        }
+
+        .mc-button-yellow {
+            background-color: #d4a373;
+            color: #000;
+            box-shadow: 
+                inset -3px -3px 0px 0px #b58253,
+                inset 3px 3px 0px 0px #fefae0;
+        }
+
+        .mc-button-orange {
+            background-color: #d97706;
+            color: #fff;
+            box-shadow: 
+                inset -3px -3px 0px 0px #92400e,
+                inset 3px 3px 0px 0px #f59e0b;
+        }
+
+        .mc-progress-bg {
+            background-color: #000000;
+            border: 3px solid #2a2a2a;
+        }
+
+        .mc-progress-fill {
+            background-color: #f59e0b;
+            box-shadow: inset 0px 3px 0px #fbbf24;
+        }
+
         /* Оверлей для текста LEVEL UP */
         #levelup-overlay {
             position: fixed;
