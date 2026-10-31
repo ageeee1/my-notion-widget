@@ -71,11 +71,11 @@
             box-shadow: inset 0px 3px 0px #fbbf24;
         }
 
-        /* Оверлей анимации майнинга */
-        #mining-overlay {
+        /* Эпический оверлей анимации */
+        #epic-overlay {
             position: fixed;
             inset: 0;
-            background-color: rgba(0, 0, 0, 0.85);
+            background-color: rgba(0, 0, 0, 0.9);
             z-index: 9998;
             display: none;
             flex-direction: column;
@@ -84,41 +84,19 @@
             pointer-events: none;
         }
 
-        /* Динамичная и агрессивная анимация кирки */
-        @keyframes dynamicSwing {
-            0% { transform: translate(140px, 140px) rotate(-50deg); }
-            20% { transform: translate(-70px, -70px) rotate(60deg) scale(1.15); }
-            40% { transform: translate(20px, 20px) rotate(-20deg); }
-            60% { transform: translate(-80px, -70px) rotate(65deg) scale(1.15); }
-            80% { transform: translate(15px, 15px) rotate(-15deg); }
-            100% { transform: translate(-70px, -70px) rotate(60deg) scale(1.15); }
+        /* Анимация появления баннера LEVEL UP */
+        @keyframes bannerDrop {
+            0% { transform: translateY(-150px) scale(0.5); opacity: 0; }
+            60% { transform: translateY(15px) scale(1.1); opacity: 1; }
+            80% { transform: translateY(-5px) scale(0.95); }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
         }
 
-        .pickaxe-dynamic {
-            animation: dynamicSwing 0.22s ease-in-out infinite;
+        .banner-animate {
+            animation: bannerDrop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
 
-        /* Остановка кирки на последнем ударе */
-        .pickaxe-final-stop {
-            transform: translate(-70px, -70px) rotate(60deg) scale(1.15) !important;
-            animation: none !important;
-        }
-
-        /* Тряска экрана */
-        @keyframes screenShake {
-            0% { transform: translate(0, 0); }
-            20% { transform: translate(-8px, 8px); }
-            40% { transform: translate(8px, -6px); }
-            60% { transform: translate(-6px, -8px); }
-            80% { transform: translate(6px, 6px); }
-            100% { transform: translate(0, 0); }
-        }
-
-        .screen-shaking {
-            animation: screenShake 0.09s infinite ease-in-out;
-        }
-
-        #mining-canvas {
+        #epic-canvas {
             position: fixed;
             top: 0;
             left: 0;
@@ -131,20 +109,18 @@
 </head>
 <body class="p-4 selection:bg-[#f59e0b] selection:text-[#000]">
 
-    <!-- Canvas для отрисовки трещин и Minecraft-частиц -->
-    <canvas id="mining-canvas"></canvas>
+    <!-- Canvas для энергетического вихря и ударных волн -->
+    <canvas id="epic-canvas"></canvas>
 
-    <!-- Оверлей с киркой и текстом LEVEL UP -->
-    <div id="mining-overlay">
-        <div class="relative flex flex-col items-center">
-            <h1 id="levelup-title" class="text-2xl md:text-5xl text-[#f59e0b] tracking-wider mb-10 drop-shadow-[5px_5px_0px_#000] text-center">
+    <!-- Оверлей с эпическим баннером -->
+    <div id="epic-overlay">
+        <div id="banner-box" class="opacity-0 flex flex-col items-center">
+            <h1 id="levelup-title" class="text-2xl md:text-5xl text-[#f59e0b] tracking-wider mb-4 drop-shadow-[6px_6px_0px_#000] text-center">
                 LEVEL UP!
             </h1>
-            <!-- Увеличенная в 3 раза кирка -->
-            <img id="pickaxe-img" src="https://i.postimg.cc/XvZvbdHL/Gemini-Generated-Image-bfs7fjbfs7fjbfs7.jpg" 
-                 class="w-[360px] h-[360px] md:w-[540px] md:h-[540px] object-contain pickaxe-dynamic drop-shadow-2xl" 
-                 alt="Pickaxe">
-            <p class="text-[9px] text-[#888888] mt-10 uppercase tracking-widest">[ MINING NEXT LEVEL... ]</p>
+            <p id="levelup-subtitle" class="text-xs md:text-sm text-[#ffffff] bg-[#141414] border-4 border-black px-6 py-3 tracking-widest shadow-[4px_4px_0px_#000]">
+                [ LEVEL 2 UNLOCKED ]
+            </p>
         </div>
     </div>
 
@@ -285,8 +261,8 @@
 
         let currentModalType = 'positive';
 
-        // --- CANVAS МАЙНИНГ И MINECRAFT-ЧАСТИЦЫ ---
-        const canvas = document.getElementById('mining-canvas');
+        // --- CANVAS: ЭПИЧЕСКИЙ ЭНЕРГЕТИЧЕСКИЙ ВИХРЬ И УДАРНЫЕ ВОЛНЫ ---
+        const canvas = document.getElementById('epic-canvas');
         const ctx = canvas.getContext('2d');
 
         function resizeCanvas() {
@@ -296,151 +272,113 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Отрисовка белых паутинистых трещин из квадратов
-        function drawSquareWebCracks(stage) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const panels = document.querySelectorAll('.mc-panel');
-            const pSize = 6;
-
-            panels.forEach((panel, panelIdx) => {
-                const rect = panel.getBoundingClientRect();
-                ctx.save();
-                ctx.translate(rect.left, rect.top);
-                ctx.fillStyle = "#ffffff";
-                ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
-                ctx.shadowBlur = 4;
-
-                const cx = Math.floor(rect.width / 2 / pSize) * pSize;
-                const cy = Math.floor(rect.height / 2 / pSize) * pSize;
-                const branches = 6 + stage * 2;
-
-                for (let i = 0; i < branches; i++) {
-                    let angle = (i * Math.PI * 2) / branches + (panelIdx * 0.4);
-                    let maxLen = (rect.width * 0.09) * stage;
-                    
-                    let endX = Math.floor((cx + Math.cos(angle) * maxLen) / pSize) * pSize;
-                    let endY = Math.floor((cy + Math.sin(angle) * maxLen) / pSize) * pSize;
-                    
-                    drawPixelGridLine(cx, cy, endX, endY, pSize);
-                }
-                ctx.restore();
-            });
-        }
-
-        function drawPixelGridLine(x0, y0, x1, y1, pSize) {
-            let dx = Math.abs(x1 - x0);
-            let dy = Math.abs(y1 - y0);
-            let sx = (x0 < x1) ? pSize : -pSize;
-            let sy = (y0 < y1) ? pSize : -pSize;
-            let err = dx - dy;
-
-            let steps = 0;
-            while (steps < 60) {
-                ctx.fillRect(x0, y0, pSize, pSize);
-                if (Math.abs(x0 - x1) < pSize && Math.abs(y0 - y1) < pSize) break;
-                let e2 = 2 * err;
-                if (e2 > -dy) {
-                    err -= dy;
-                    x0 += sx;
-                }
-                if (e2 < dx) {
-                    err += dx;
-                    y0 += sy;
-                }
-                steps++;
-            }
-        }
-
-        function triggerMiningAnimation(newLevel) {
-            const overlay = document.getElementById('mining-overlay');
+        function triggerEpicLevelUpAnimation(newLevel) {
+            const overlay = document.getElementById('epic-overlay');
+            const bannerBox = document.getElementById('banner-box');
             const title = document.getElementById('levelup-title');
-            const pickaxe = document.getElementById('pickaxe-img');
-            const mainApp = document.getElementById('main-app');
+            const subtitle = document.getElementById('levelup-subtitle');
 
-            title.innerText = `LEVEL UP! [LVL ${newLevel}]`;
-            
-            // Включаем тряску экрана и агрессивный удар киркой
-            mainApp.classList.add('screen-shaking');
-            pickaxe.classList.remove('pickaxe-final-stop');
-            pickaxe.classList.add('pickaxe-dynamic');
+            title.innerText = `LEVEL UP!`;
+            subtitle.innerText = `[ REACHED LEVEL ${newLevel} ]`;
             
             overlay.style.display = 'flex';
+            bannerBox.classList.remove('banner-animate');
+            void bannerBox.offsetWidth; // сброс анимации
+            bannerBox.classList.add('banner-animate');
 
-            let currentStage = 1;
-            const maxStages = 10;
-            
-            const interval = setInterval(() => {
-                drawSquareWebCracks(currentStage);
-                currentStage++;
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
 
-                if (currentStage > maxStages) {
-                    clearInterval(interval);
-                    
-                    // Останавливаем кирку на финальном ударе
-                    pickaxe.classList.remove('pickaxe-dynamic');
-                    pickaxe.classList.add('pickaxe-final-stop');
-
-                    // Пауза перед разлетом Minecraft-частиц и возвратом в меню
-                    setTimeout(() => {
-                        mainApp.classList.remove('screen-shaking');
-                        triggerMinecraftBlockParticles();
-                    }, 700);
-                }
-            }, 320);
-        }
-
-        // --- МИНЕКРАФТ-ЧАСТИЦЫ: белый и два оттенка серого ---
-        function triggerMinecraftBlockParticles() {
+            // Частицы вихря и взрыва
             let particles = [];
-            const panels = document.querySelectorAll('.mc-panel');
+            let rings = [];
 
-            // Палитра: белый (#ffffff), светло-серый (#cccccc), тёмно-серый (#555555)
-            const mcGrayPalette = ['#ffffff', '#cccccc', '#555555'];
+            // Создаем концентрические кольца ударной волны
+            for (let i = 0; i < 3; i++) {
+                rings.push({
+                    radius: 10,
+                    maxRadius: Math.max(window.innerWidth, window.innerHeight) * 0.8,
+                    speed: 25 + i * 8,
+                    alpha: 1.0,
+                    color: i === 0 ? '#ffffff' : (i === 1 ? '#f59e0b' : '#d97706')
+                });
+            }
 
-            panels.forEach(panel => {
-                const rect = panel.getBoundingClientRect();
-                for (let i = 0; i < 40; i++) {
-                    particles.push({
-                        x: rect.left + Math.random() * rect.width,
-                        y: rect.top + Math.random() * rect.height,
-                        size: Math.floor(Math.random() * 6) + 4, // Пиксельные квадратные кусочки
-                        vx: (Math.random() - 0.5) * 26,
-                        vy: (Math.random() - 0.5) * 26 - 5,
-                        life: 1.0,
-                        decay: Math.random() * 0.02 + 0.008,
-                        color: mcGrayPalette[Math.floor(Math.random() * mcGrayPalette.length)]
-                    });
-                }
-            });
+            // Создаем спиральные пиксельные искры
+            for (let i = 0; i < 250; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 400 + 100;
+                particles.push({
+                    x: centerX + Math.cos(angle) * dist,
+                    y: centerY + Math.sin(angle) * dist,
+                    targetX: centerX,
+                    targetY: centerY,
+                    size: Math.floor(Math.random() * 8) + 4,
+                    speed: Math.random() * 0.08 + 0.03,
+                    angle: angle,
+                    dist: dist,
+                    phase: 'in', // сначала летят в центр, потом взрываются наружу
+                    color: ['#ffffff', '#fefae0', '#f59e0b', '#d97706', '#2a2a2a'][Math.floor(Math.random() * 5)]
+                });
+            }
 
-            function animateParticles() {
+            let frame = 0;
+            function animateEpic() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                let active = false;
+                frame++;
 
-                particles.forEach(p => {
-                    if (p.life > 0) {
-                        active = true;
-                        p.x += p.vx;
-                        p.y += p.vy;
-                        p.vy += 0.4; // гравитация блока
-                        p.life -= p.decay;
-
-                        ctx.fillStyle = p.color;
-                        ctx.globalAlpha = Math.max(0, p.life);
-                        // Рендерим точные квадратные пиксели блоков Minecraft
-                        ctx.fillRect(Math.floor(p.x), Math.floor(p.y), p.size, p.size);
-                    }
+                // Рендер и расширение ударных волн
+                rings.forEach(ring => {
+                    ring.radius += ring.speed;
+                    ring.alpha = Math.max(0, 1 - (ring.radius / ring.maxRadius));
+                    
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, ring.radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = ring.color;
+                    ctx.lineWidth = 6;
+                    ctx.globalAlpha = ring.alpha;
+                    ctx.stroke();
+                    ctx.restore();
                 });
 
-                if (active) {
-                    requestAnimationFrame(animateParticles);
+                // Рендер и физика пиксельных частиц
+                particles.forEach(p => {
+                    if (p.phase === 'in') {
+                        // Стягивание в центр вихря
+                        p.dist -= 12;
+                        p.angle += 0.15;
+                        p.x = centerX + Math.cos(p.angle) * p.dist;
+                        p.y = centerY + Math.sin(p.angle) * p.dist;
+
+                        if (p.dist <= 10) {
+                            p.phase = 'out';
+                            p.vx = (Math.random() - 0.5) * 35;
+                            p.vy = (Math.random() - 0.5) * 35;
+                        }
+                    } else {
+                        // Взрывной разлет наружу
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.vy += 0.3; // гравитация
+                        p.vx *= 0.96;
+                    }
+
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.phase === 'in' ? 0.8 : 1.0;
+                    ctx.fillRect(Math.floor(p.x), Math.floor(p.y), p.size, p.size);
+                });
+
+                if (frame < 110) {
+                    requestAnimationFrame(animateEpic);
                 } else {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    document.getElementById('mining-overlay').style.display = 'none';
+                    overlay.style.display = 'none';
+                    bannerBox.classList.remove('banner-animate');
                 }
             }
 
-            animateParticles();
+            animateEpic();
         }
 
         // --- JSONBIN LOGIC ---
@@ -500,7 +438,7 @@
             state.level = newLevel;
 
             if (newLevel > oldLevel) {
-                triggerMiningAnimation(newLevel);
+                triggerEpicLevelUpAnimation(newLevel);
             }
 
             render();
