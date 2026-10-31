@@ -28,7 +28,6 @@
                 inset -4px -4px 0px 0px #0a0a0a,
                 inset 4px 4px 0px 0px #2a2a2a;
             position: relative;
-            transition: opacity 0.2s;
         }
 
         .mc-button {
@@ -72,55 +71,40 @@
             box-shadow: inset 0px 3px 0px #fbbf24;
         }
 
-        /* Анимация Тренщин на блоках меню */
-        @keyframes blockCrackAnimation {
-            0% {
-                background-image: none;
-                filter: brightness(1);
-            }
-            20% {
-                /* Трещины 1 стадия */
-                background-image: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8) 41%),
-                                  linear-gradient(45deg, transparent 45%, #000 45%, #000 55%, transparent 55%);
-                filter: brightness(1.2);
-            }
-            50% {
-                /* Трещины 2 стадия */
-                background-image: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.9) 21%),
-                                  linear-gradient(45deg, transparent 40%, #000 40%, #000 60%, transparent 60%),
-                                  linear-gradient(-45deg, transparent 40%, #000 40%, #000 60%, transparent 60%);
-                filter: brightness(1.5) contrast(150%);
-            }
-            80% {
-                /* Вспышка перед взрывом */
-                background-color: #ffffff !important;
-                filter: brightness(2);
-                opacity: 0.8;
-            }
-            100% {
-                opacity: 0;
-            }
-        }
-
-        .block-cracking {
-            animation: blockCrackAnimation 1.2s forwards steps(4);
-        }
-
-        #tnt-canvas {
+        /* Полноэкранный видео модал */
+        #video-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            pointer-events: none;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.95);
             z-index: 9999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
 <body class="p-4 selection:bg-[#f59e0b] selection:text-[#000]">
 
-    <!-- Canvas для масштабного взрыва -->
-    <canvas id="tnt-canvas"></canvas>
+    <!-- Модальное окно с видео при повышении уровня -->
+    <div id="video-overlay">
+        <div class="mc-panel p-4 max-w-2xl w-full mx-4 flex flex-col items-center space-y-4 border-4 border-[#f59e0b]">
+            <h2 id="level-up-title" class="text-sm md:text-base text-[#f59e0b] text-center tracking-wider animate-pulse">
+                ★ LEVEL UP! ★
+            </h2>
+            
+            <div class="w-full aspect-video bg-black border-2 border-[#333333] overflow-hidden flex items-center justify-center">
+                <video id="levelup-video" class="w-full h-full object-cover" playsinline>
+                    <source src="https://kinescope.io/rZFv1n8dKeVeYwPPWku78e" type="video/mp4">
+                    Ваш браузер не поддерживает видео.
+                </video>
+            </div>
+
+            <button onclick="closeVideoOverlay()" class="mc-button mc-button-yellow text-[10px] px-6 py-3">
+                CONTINUE
+            </button>
+        </div>
+    </div>
 
     <!-- Главный Контейнер Интерфейса -->
     <div id="main-app" class="max-w-5xl mx-auto space-y-6">
@@ -215,7 +199,7 @@
         </main>
     </div>
 
-    <!-- Модальное Окно -->
+    <!-- Модальное Окно Добавления Задач -->
     <div id="action-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
         <div class="mc-panel max-w-sm w-full p-6 space-y-4">
             <h3 id="modal-title" class="text-xs text-[#f59e0b]">ADD ITEM</h3>
@@ -259,118 +243,30 @@
 
         let currentModalType = 'positive';
 
-        // --- CANVAS DURATION & MASSIVE EXPLOSION ENGINE ---
-        const canvas = document.getElementById('tnt-canvas');
-        const ctx = canvas.getContext('2d');
+        // --- ЛОГИКА ВОСПРОИЗВЕДЕНИЯ ВИДЕО ПРИ LEVEL UP ---
+        function playLevelUpVideo(newLevel) {
+            const overlay = document.getElementById('video-overlay');
+            const video = document.getElementById('levelup-video');
+            const title = document.getElementById('level-up-title');
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+            title.innerText = `★ LEVEL UP! YOU ARE NOW LEVEL ${newLevel}! ★`;
+            overlay.style.display = 'flex';
 
-        class PixelParticle {
-            constructor(x, y, isDebris = false) {
-                this.x = x;
-                this.y = y;
-                // Крупные блоки меню распадутся на большие и маленькие куски
-                this.size = isDebris ? Math.floor(Math.random() * 20) + 12 : Math.floor(Math.random() * 16) + 6;
-                
-                const angle = Math.random() * Math.PI * 2;
-                const speed = isDebris ? (Math.random() * 30 + 10) : (Math.random() * 25 + 5);
-                
-                this.vx = Math.cos(angle) * speed;
-                this.vy = Math.sin(angle) * speed - (Math.random() * 10); // Всплеск вверх
-                
-                this.life = 1.0;
-                // Более долгая задержка жизни (анимация дольше)
-                this.decay = Math.random() * 0.008 + 0.004; 
-                
-                const colors = ['#f59e0b', '#fefae0', '#ffffff', '#000000', '#d97706', '#141414', '#2a2a2a'];
-                this.color = colors[Math.floor(Math.random() * colors.length)];
-                this.rotation = Math.random() * Math.PI;
-                this.vRot = (Math.random() - 0.5) * 0.2;
-            }
+            // Перезапускаем видео с начала
+            video.currentTime = 0;
+            video.play().catch(e => console.log('Video autoplay blocked:', e));
 
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.vy += 0.4; // Гравитация
-                this.vx *= 0.98; // Сопротивление воздуха
-                this.rotation += this.vRot;
-                this.life -= this.decay;
-            }
-
-            draw() {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.rotation);
-                ctx.fillStyle = this.color;
-                ctx.globalAlpha = Math.max(0, this.life);
-                ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
-                ctx.restore();
-            }
+            // Автоматическое закрытие по окончании видео
+            video.onended = () => {
+                closeVideoOverlay();
+            };
         }
 
-        let particles = [];
-        let animId = null;
-
-        function triggerEpicExplosion() {
-            particles = [];
-            const panels = document.querySelectorAll('.mc-panel');
-
-            // 1. Запускаем трескание блоков
-            panels.forEach(p => p.classList.add('block-cracking'));
-
-            // 2. Через 1.2с запускаем рождение осколков и взрыв
-            setTimeout(() => {
-                // Создаем осколки прямо из точек каждого блока
-                panels.forEach(panel => {
-                    const rect = panel.getBoundingClientRect();
-                    const count = 120; // Много частиц с каждого меню
-                    for (let i = 0; i < count; i++) {
-                        const px = rect.left + Math.random() * rect.width;
-                        const py = rect.top + Math.random() * rect.height;
-                        particles.push(new PixelParticle(px, py, true));
-                    }
-                });
-
-                // Эпицентр взрыва из центра экрана
-                const centerX = window.innerWidth / 2;
-                const centerY = window.innerHeight / 2;
-                for (let i = 0; i < 400; i++) {
-                    particles.push(new PixelParticle(centerX, centerY, false));
-                }
-
-                if (animId) cancelAnimationFrame(animId);
-                animateExplosion();
-
-                // Восстанавливаем блоки меню после взрыва
-                setTimeout(() => {
-                    panels.forEach(p => {
-                        p.classList.remove('block-cracking');
-                        p.style.opacity = '1';
-                    });
-                }, 1000);
-
-            }, 1200);
-        }
-
-        function animateExplosion() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            particles.forEach((p, index) => {
-                p.update();
-                p.draw();
-                if (p.life <= 0) particles.splice(index, 1);
-            });
-
-            if (particles.length > 0) {
-                animId = requestAnimationFrame(animateExplosion);
-            } else {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
+        function closeVideoOverlay() {
+            const overlay = document.getElementById('video-overlay');
+            const video = document.getElementById('levelup-video');
+            video.pause();
+            overlay.style.display = 'none';
         }
 
         // --- JSONBIN LOGIC ---
@@ -429,9 +325,9 @@
             const newLevel = Math.floor(state.xp / 100) + 1;
             state.level = newLevel;
 
-            // Запуск масштабной анимации при повышении уровня!
+            // Если уровень повысился — запускаем видео!
             if (newLevel > oldLevel) {
-                triggerEpicExplosion();
+                playLevelUpVideo(newLevel);
             }
 
             render();
