@@ -71,25 +71,41 @@
             box-shadow: inset 0px 3px 0px #fbbf24;
         }
 
-        /* Полноэкранный видео оверлей без рамки */
-        #video-overlay {
+        /* Оверлей для текста LEVEL UP */
+        #levelup-overlay {
             position: fixed;
             inset: 0;
-            background-color: #000000;
-            z-index: 9999;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 9998;
             display: none;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            pointer-events: none;
+        }
+
+        #tnt-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
         }
     </style>
 </head>
 <body class="p-4 selection:bg-[#f59e0b] selection:text-[#000]">
 
-    <!-- Полноэкранный видео оверлей с вашим iframe (без рамок) -->
-    <div id="video-overlay">
-        <div id="iframe-container" style="position: relative; width: 100%; height: 100%;">
-            <!-- Динамически вставляемый Kinescope iframe заполняет весь экран -->
-        </div>
+    <!-- Canvas для взрыва динамита -->
+    <canvas id="tnt-canvas"></canvas>
+
+    <!-- Оверлей с текстом LEVEL UP -->
+    <div id="levelup-overlay">
+        <h1 id="levelup-title" class="text-2xl md:text-5xl text-[#f59e0b] tracking-wider text-center animate-bounce drop-shadow-[6px_6px_0px_#000]">
+            LEVEL UP!
+        </h1>
+        <p class="text-[9px] text-[#888888] mt-4 uppercase tracking-widest">[ RETURNING TO MENU ]</p>
     </div>
 
     <!-- Главный Контейнер Интерфейса -->
@@ -229,24 +245,72 @@
 
         let currentModalType = 'positive';
 
-        // --- ЛОГИКА ПОЛНОЭКРАННОГО KINESCOPE ВИДЕО ---
-        function playLevelUpVideo() {
-            const overlay = document.getElementById('video-overlay');
-            const container = document.getElementById('iframe-container');
+        // --- ЛОГИКА ВЗРЫВА И ТЕКСТА LEVEL UP ---
+        const canvas = document.getElementById('tnt-canvas');
+        const ctx = canvas.getContext('2d');
 
-            // Вставляем ваш iframe с автозапуском
-            container.innerHTML = `
-                <div style="position: relative; width: 100%; height: 100%;">
-                    <iframe src="https://kinescope.io/embed/rZFv1n8dKeVeYwPPWku78e?autoplay=1" 
-                        allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer; clipboard-write; screen-wake-lock;" 
-                        frameborder="0" 
-                        allowfullscreen 
-                        style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none;">
-                    </iframe>
-                </div>
-            `;
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
+        function triggerTNTExplosion(newLevel) {
+            const overlay = document.getElementById('levelup-overlay');
+            const title = document.getElementById('levelup-title');
+            title.innerText = `LEVEL UP! [LVL ${newLevel}]`;
             overlay.style.display = 'flex';
+
+            // Генерируем пиксельные частицы взрыва
+            let particles = [];
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+
+            for (let i = 0; i < 250; i++) {
+                particles.push({
+                    x: centerX,
+                    y: centerY,
+                    size: Math.floor(Math.random() * 16) + 8,
+                    vx: (Math.random() - 0.5) * 32,
+                    vy: (Math.random() - 0.5) * 32 - 6,
+                    life: 1.0,
+                    decay: Math.random() * 0.015 + 0.008,
+                    color: ['#f59e0b', '#fefae0', '#ffffff', '#000000', '#d97706', '#222222'][Math.floor(Math.random() * 6)]
+                });
+            }
+
+            function animateParticles() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let active = false;
+
+                particles.forEach(p => {
+                    if (p.life > 0) {
+                        active = true;
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.vy += 0.45; // гравитация
+                        p.life -= p.decay;
+
+                        ctx.fillStyle = p.color;
+                        ctx.globalAlpha = Math.max(0, p.life);
+                        ctx.fillRect(Math.floor(p.x), Math.floor(p.y), p.size, p.size);
+                    }
+                });
+
+                if (active) {
+                    requestAnimationFrame(animateParticles);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            animateParticles();
+
+            // Автоматический возврат в меню через 2.2 секунды
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 2200);
         }
 
         // --- JSONBIN LOGIC ---
@@ -305,9 +369,9 @@
             const newLevel = Math.floor(state.xp / 100) + 1;
             state.level = newLevel;
 
-            // Если уровень повысился — запускаем полноэкранное видео Kinescope!
+            // Если уровень повысился — запускаем взрыв динамита и текст LEVEL UP
             if (newLevel > oldLevel) {
-                playLevelUpVideo();
+                triggerTNTExplosion(newLevel);
             }
 
             render();
