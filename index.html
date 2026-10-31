@@ -84,39 +84,38 @@
             pointer-events: none;
         }
 
-        /* Агрессивные удары киркой */
-        @keyframes aggressiveSwing {
-            0% { transform: translate(160px, 160px) rotate(-55deg); }
-            15% { transform: translate(-90px, -90px) rotate(70deg) scale(1.15); }
-            30% { transform: translate(30px, 30px) rotate(-30deg); }
-            45% { transform: translate(-100px, -80px) rotate(75deg) scale(1.15); }
-            65% { transform: translate(25px, 25px) rotate(-25deg); }
-            100% { transform: translate(-90px, -90px) rotate(70deg) scale(1.15); }
+        /* Динамичная и агрессивная анимация кирки */
+        @keyframes dynamicSwing {
+            0% { transform: translate(140px, 140px) rotate(-50deg); }
+            20% { transform: translate(-70px, -70px) rotate(60deg) scale(1.15); }
+            40% { transform: translate(20px, 20px) rotate(-20deg); }
+            60% { transform: translate(-80px, -70px) rotate(65deg) scale(1.15); }
+            80% { transform: translate(15px, 15px) rotate(-15deg); }
+            100% { transform: translate(-70px, -70px) rotate(60deg) scale(1.15); }
         }
 
-        .pickaxe-aggressive {
-            animation: aggressiveSwing 0.25s ease-in-out infinite;
+        .pickaxe-dynamic {
+            animation: dynamicSwing 0.22s ease-in-out infinite;
         }
 
-        /* Состояние остановки кирки на финальном ударе */
-        .pickaxe-stop {
-            transform: translate(-90px, -90px) rotate(70deg) scale(1.15) !important;
+        /* Остановка кирки на последнем ударе */
+        .pickaxe-final-stop {
+            transform: translate(-70px, -70px) rotate(60deg) scale(1.15) !important;
             animation: none !important;
         }
 
-        /* Эффект тряски экрана во время майнинга */
+        /* Тряска экрана */
         @keyframes screenShake {
             0% { transform: translate(0, 0); }
-            15% { transform: translate(-7px, 9px); }
-            30% { transform: translate(9px, -7px); }
-            45% { transform: translate(-9px, -5px); }
-            60% { transform: translate(7px, 7px); }
-            75% { transform: translate(-5px, -9px); }
+            20% { transform: translate(-8px, 8px); }
+            40% { transform: translate(8px, -6px); }
+            60% { transform: translate(-6px, -8px); }
+            80% { transform: translate(6px, 6px); }
             100% { transform: translate(0, 0); }
         }
 
         .screen-shaking {
-            animation: screenShake 0.1s infinite ease-in-out;
+            animation: screenShake 0.09s infinite ease-in-out;
         }
 
         #mining-canvas {
@@ -132,10 +131,10 @@
 </head>
 <body class="p-4 selection:bg-[#f59e0b] selection:text-[#000]">
 
-    <!-- Canvas для отрисовки белых квадратных паутинистых трещин -->
+    <!-- Canvas для отрисовки трещин и Minecraft-частиц -->
     <canvas id="mining-canvas"></canvas>
 
-    <!-- Оверлей с увеличенной киркой и текстом LEVEL UP -->
+    <!-- Оверлей с киркой и текстом LEVEL UP -->
     <div id="mining-overlay">
         <div class="relative flex flex-col items-center">
             <h1 id="levelup-title" class="text-2xl md:text-5xl text-[#f59e0b] tracking-wider mb-10 drop-shadow-[5px_5px_0px_#000] text-center">
@@ -143,13 +142,13 @@
             </h1>
             <!-- Увеличенная в 3 раза кирка -->
             <img id="pickaxe-img" src="https://i.postimg.cc/XvZvbdHL/Gemini-Generated-Image-bfs7fjbfs7fjbfs7.jpg" 
-                 class="w-[360px] h-[360px] md:w-[540px] md:h-[540px] object-contain pickaxe-aggressive drop-shadow-2xl" 
+                 class="w-[360px] h-[360px] md:w-[540px] md:h-[540px] object-contain pickaxe-dynamic drop-shadow-2xl" 
                  alt="Pickaxe">
             <p class="text-[9px] text-[#888888] mt-10 uppercase tracking-widest">[ MINING NEXT LEVEL... ]</p>
         </div>
     </div>
 
-    <!-- Главный Контейнер Интерфейса (подвержен тряске) -->
+    <!-- Главный Контейнер Интерфейса -->
     <div id="main-app" class="max-w-5xl mx-auto space-y-6">
 
         <!-- Верхняя Панель -->
@@ -286,7 +285,7 @@
 
         let currentModalType = 'positive';
 
-        // --- CANVAS КВАДРАТНЫЕ ПАУТИНИСТЫЕ ТРЕЩИНЫ ---
+        // --- CANVAS МАЙНИНГ И MINECRAFT-ЧАСТИЦЫ ---
         const canvas = document.getElementById('mining-canvas');
         const ctx = canvas.getContext('2d');
 
@@ -297,11 +296,11 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Отрисовка белых паутинистых трещин, состоящих из пиксельных квадратных блоков
+        // Отрисовка белых паутинистых трещин из квадратов
         function drawSquareWebCracks(stage) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const panels = document.querySelectorAll('.mc-panel');
-            const pSize = 6; // Размер квадратного пиксель-блока трещины
+            const pSize = 6;
 
             panels.forEach((panel, panelIdx) => {
                 const rect = panel.getBoundingClientRect();
@@ -322,21 +321,7 @@
                     let endX = Math.floor((cx + Math.cos(angle) * maxLen) / pSize) * pSize;
                     let endY = Math.floor((cy + Math.sin(angle) * maxLen) / pSize) * pSize;
                     
-                    // Рисуем квадратную сетку паутины (Bresenham grid line)
                     drawPixelGridLine(cx, cy, endX, endY, pSize);
-
-                    // Перекрестные паутинные соединения (паутина)
-                    if (stage >= 3) {
-                        let midX = Math.floor((cx + endX) / 2 / pSize) * pSize;
-                        let midY = Math.floor((cy + endY) / 2 / pSize) * pSize;
-                        let perpAngle = angle + Math.PI / 2;
-                        let webWidth = stage * 7;
-                        let wX1 = Math.floor((midX + Math.cos(perpAngle) * webWidth) / pSize) * pSize;
-                        let wY1 = Math.floor((midY + Math.sin(perpAngle) * webWidth) / pSize) * pSize;
-                        let wX2 = Math.floor((midX - Math.cos(perpAngle) * webWidth) / pSize) * pSize;
-                        let wY2 = Math.floor((midY - Math.sin(perpAngle) * webWidth) / pSize) * pSize;
-                        drawPixelGridLine(wX1, wY1, wX2, wY2, pSize);
-                    }
                 }
                 ctx.restore();
             });
@@ -376,13 +361,13 @@
             
             // Включаем тряску экрана и агрессивный удар киркой
             mainApp.classList.add('screen-shaking');
-            pickaxe.classList.remove('pickaxe-stop');
-            pickaxe.classList.add('pickaxe-aggressive');
+            pickaxe.classList.remove('pickaxe-final-stop');
+            pickaxe.classList.add('pickaxe-dynamic');
             
             overlay.style.display = 'flex';
 
             let currentStage = 1;
-            const maxStages = 10; // 10 стадий для долгой анимации
+            const maxStages = 10;
             
             const interval = setInterval(() => {
                 drawSquareWebCracks(currentStage);
@@ -392,34 +377,38 @@
                     clearInterval(interval);
                     
                     // Останавливаем кирку на финальном ударе
-                    pickaxe.classList.remove('pickaxe-aggressive');
-                    pickaxe.classList.add('pickaxe-stop');
+                    pickaxe.classList.remove('pickaxe-dynamic');
+                    pickaxe.classList.add('pickaxe-final-stop');
 
-                    // Задержка в конце перед разлетом частиц и возвратом в меню
+                    // Пауза перед разлетом Minecraft-частиц и возвратом в меню
                     setTimeout(() => {
                         mainApp.classList.remove('screen-shaking');
-                        triggerWebParticles();
-                    }, 800);
+                        triggerMinecraftBlockParticles();
+                    }, 700);
                 }
-            }, 350); // Интервал стадий для замедленной анимации
+            }, 320);
         }
 
-        function triggerWebParticles() {
+        // --- МИНЕКРАФТ-ЧАСТИЦЫ: белый и два оттенка серого ---
+        function triggerMinecraftBlockParticles() {
             let particles = [];
             const panels = document.querySelectorAll('.mc-panel');
 
+            // Палитра: белый (#ffffff), светло-серый (#cccccc), тёмно-серый (#555555)
+            const mcGrayPalette = ['#ffffff', '#cccccc', '#555555'];
+
             panels.forEach(panel => {
                 const rect = panel.getBoundingClientRect();
-                for (let i = 0; i < 35; i++) {
+                for (let i = 0; i < 40; i++) {
                     particles.push({
                         x: rect.left + Math.random() * rect.width,
                         y: rect.top + Math.random() * rect.height,
-                        size: Math.floor(Math.random() * 8) + 4,
-                        vx: (Math.random() - 0.5) * 24,
-                        vy: (Math.random() - 0.5) * 24 - 6,
+                        size: Math.floor(Math.random() * 6) + 4, // Пиксельные квадратные кусочки
+                        vx: (Math.random() - 0.5) * 26,
+                        vy: (Math.random() - 0.5) * 26 - 5,
                         life: 1.0,
                         decay: Math.random() * 0.02 + 0.008,
-                        color: ['#ffffff', '#fefae0', '#d4a373', '#2a2a2a'][Math.floor(Math.random() * 4)]
+                        color: mcGrayPalette[Math.floor(Math.random() * mcGrayPalette.length)]
                     });
                 }
             });
@@ -433,11 +422,12 @@
                         active = true;
                         p.x += p.vx;
                         p.y += p.vy;
-                        p.vy += 0.35; // гравитация
+                        p.vy += 0.4; // гравитация блока
                         p.life -= p.decay;
 
                         ctx.fillStyle = p.color;
                         ctx.globalAlpha = Math.max(0, p.life);
+                        // Рендерим точные квадратные пиксели блоков Minecraft
                         ctx.fillRect(Math.floor(p.x), Math.floor(p.y), p.size, p.size);
                     }
                 });
@@ -509,7 +499,6 @@
             const newLevel = Math.floor(state.xp / 100) + 1;
             state.level = newLevel;
 
-            // Если уровень повысился — запускаем анимацию майнинга с тряской и паутиной
             if (newLevel > oldLevel) {
                 triggerMiningAnimation(newLevel);
             }
