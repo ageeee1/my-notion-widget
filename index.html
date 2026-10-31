@@ -71,14 +71,13 @@
             box-shadow: inset 0px 3px 0px #fbbf24;
         }
 
-        /* Полноэкранный видео модал */
+        /* Полноэкранный видео оверлей без рамки */
         #video-overlay {
             position: fixed;
             inset: 0;
-            background-color: rgba(0, 0, 0, 0.95);
+            background-color: #000000;
             z-index: 9999;
             display: none;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
         }
@@ -86,23 +85,10 @@
 </head>
 <body class="p-4 selection:bg-[#f59e0b] selection:text-[#000]">
 
-    <!-- Модальное окно с видео при повышении уровня -->
+    <!-- Полноэкранный видео оверлей с вашим iframe (без рамок) -->
     <div id="video-overlay">
-        <div class="mc-panel p-4 max-w-2xl w-full mx-4 flex flex-col items-center space-y-4 border-4 border-[#f59e0b]">
-            <h2 id="level-up-title" class="text-sm md:text-base text-[#f59e0b] text-center tracking-wider animate-pulse">
-                ★ LEVEL UP! ★
-            </h2>
-            
-            <div class="w-full aspect-video bg-black border-2 border-[#333333] overflow-hidden flex items-center justify-center">
-                <video id="levelup-video" class="w-full h-full object-cover" playsinline>
-                    <source src="https://kinescope.io/rZFv1n8dKeVeYwPPWku78e" type="video/mp4">
-                    Ваш браузер не поддерживает видео.
-                </video>
-            </div>
-
-            <button onclick="closeVideoOverlay()" class="mc-button mc-button-yellow text-[10px] px-6 py-3">
-                CONTINUE
-            </button>
+        <div id="iframe-container" style="position: relative; width: 100%; height: 100%;">
+            <!-- Динамически вставляемый Kinescope iframe заполняет весь экран -->
         </div>
     </div>
 
@@ -243,30 +229,24 @@
 
         let currentModalType = 'positive';
 
-        // --- ЛОГИКА ВОСПРОИЗВЕДЕНИЯ ВИДЕО ПРИ LEVEL UP ---
-        function playLevelUpVideo(newLevel) {
+        // --- ЛОГИКА ПОЛНОЭКРАННОГО KINESCOPE ВИДЕО ---
+        function playLevelUpVideo() {
             const overlay = document.getElementById('video-overlay');
-            const video = document.getElementById('levelup-video');
-            const title = document.getElementById('level-up-title');
+            const container = document.getElementById('iframe-container');
 
-            title.innerText = `★ LEVEL UP! YOU ARE NOW LEVEL ${newLevel}! ★`;
+            // Вставляем ваш iframe с автозапуском
+            container.innerHTML = `
+                <div style="position: relative; width: 100%; height: 100%;">
+                    <iframe src="https://kinescope.io/embed/rZFv1n8dKeVeYwPPWku78e?autoplay=1" 
+                        allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer; clipboard-write; screen-wake-lock;" 
+                        frameborder="0" 
+                        allowfullscreen 
+                        style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none;">
+                    </iframe>
+                </div>
+            `;
+
             overlay.style.display = 'flex';
-
-            // Перезапускаем видео с начала
-            video.currentTime = 0;
-            video.play().catch(e => console.log('Video autoplay blocked:', e));
-
-            // Автоматическое закрытие по окончании видео
-            video.onended = () => {
-                closeVideoOverlay();
-            };
-        }
-
-        function closeVideoOverlay() {
-            const overlay = document.getElementById('video-overlay');
-            const video = document.getElementById('levelup-video');
-            video.pause();
-            overlay.style.display = 'none';
         }
 
         // --- JSONBIN LOGIC ---
@@ -325,9 +305,9 @@
             const newLevel = Math.floor(state.xp / 100) + 1;
             state.level = newLevel;
 
-            // Если уровень повысился — запускаем видео!
+            // Если уровень повысился — запускаем полноэкранное видео Kinescope!
             if (newLevel > oldLevel) {
-                playLevelUpVideo(newLevel);
+                playLevelUpVideo();
             }
 
             render();
