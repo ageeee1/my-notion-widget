@@ -87,6 +87,7 @@
   .lvl b.pop{animation:lvlPop .55s steps(6)}
   .xpwrap{width:min(44vw,280px)}
   .xpmeta{display:flex; justify-content:space-between; font-size:8px; color:#cfcfcf; margin-bottom:8px; text-shadow:2px 2px 0 #000}
+  .xpsub{display:flex; justify-content:space-between; gap:8px; margin-top:8px; font-size:8px; color:#8a8a8a; text-shadow:2px 2px 0 #000; white-space:nowrap}
   .xptrack{position:relative; height:24px; background:#08080a; border:4px solid #000; outline:2px solid #3a3a40; overflow:hidden; box-shadow:inset 0 3px 0 rgba(255,255,255,.07)}
   .xpfill{
     position:absolute; left:0; top:0; bottom:0; width:0;
@@ -315,6 +316,7 @@
             <div class="xpfill" id="xp-bar"></div>
             <div class="xpnotch"></div>
           </div>
+          <div class="xpsub"><span id="xp-total">TOTAL 0</span><span id="xp-left">100 TO GO</span></div>
         </div>
       </div>
     </div>
@@ -983,6 +985,29 @@ const FX = (() => {
   };
 })();
 
+/* ═════════════ ШКАЛА XP / УРОВНИ ═════════════
+   Каждый следующий уровень требует на XP_STEP больше, чем предыдущий:
+     уровень 1 → 2 :  100 XP
+     уровень 2 → 3 :  130 XP
+     уровень 3 → 4 :  160 XP   ... и так далее (арифметическая прогрессия)
+
+   state.xp хранит ОБЩИЙ накопленный XP. Уровень и прогресс бара всегда
+   вычисляются из него, поэтому штрафы корректно «откатывают» и бар, и уровень. */
+const XP_BASE = 100;     // XP, нужный для перехода с 1-го уровня на 2-й
+const XP_STEP = 30;      // на сколько больше требует каждый следующий уровень
+const XP_VERSION = 2;    // версия модели XP в сохранении (1 = старая, 100 XP на уровень)
+
+/* сколько XP нужно, чтобы перейти с уровня L на L+1 */
+const xpNeed = L => XP_BASE + XP_STEP*(L - 1);
+/* общий XP, с которого НАЧИНАЕТСЯ уровень L (сумма требований уровней 1..L-1) */
+const xpTotalFor = L => (L - 1)*XP_BASE + XP_STEP*(L - 1)*(L - 2)/2;
+/* уровень по общему XP */
+function levelFromXP(xp){
+  let L = 1;
+  while(xpTotalFor(L + 1) <= xp) L++;
+  return L;
+}
+
 /* ═════════════ ДАННЫЕ И JSONBIN ═════════════ */
 const BIN_ID = "6ae4d805ac6210605a5f66f0";
 const API_KEY = "$2a$10$zO6OXGmcu2KvGcO3IaTkRODmKt2zrnA/F9oJaKG3K2Te28jjW81yu";
@@ -990,6 +1015,7 @@ const API_KEY = "$2a$10$zO6OXGmcu2KvGcO3IaTkRODmKt2zrnA/F9oJaKG3K2Te28jjW81yu";
 let state = {
   xp: 0,
   level: 1,
+  xpVersion: XP_VERSION,
   positiveActions: [
     { id: 'p1', name: 'WORKOUT', xp: 40 },
     { id: 'p2', name: 'READ BOOK 30M', xp: 20 }
@@ -1004,6 +1030,22 @@ let state = {
 };
 let currentModalType = 'positive';
 
+/* Старые сохранения считали «100 XP на уровень». Переносим так, чтобы
+   уровень и XP внутри уровня остались прежними (меняется только потолок). */
+function migrateXP(){
+  if(state.xpVersion === XP_VERSION){
+    state.xp = Math.max(0, Number(state.xp) || 0);
+    state.level = levelFromXP(state.xp);
+    return false;
+  }
+  const oldXP = Math.max(0, Number(state.xp) || 0);
+  const oldLevel = Math.floor(oldXP/100) + 1;
+  state.xp = xpTotalFor(oldLevel) + (oldXP % 100);
+  state.level = oldLevel;
+  state.xpVersion = XP_VERSION;
+  return true;
+}
+
 function setStatus(text, cls){
   const el = $('sync-status');
   el.textContent = text; el.className = 'sync ' + (cls || '');
@@ -1016,14 +1058,17 @@ async function loadData(){
     });
     if(!response.ok) throw new Error('ERR');
     const data = await response.json();
+    let migrated = false;
     if(data.record){
       state = data.record;
       if(!state.positiveActions) state.positiveActions = [];
       if(!state.negativeActions) state.negativeActions = [];
       if(!state.streaks) state.streaks = [];
+      migrated = migrateXP();
     }
     render();
     setStatus('[STATUS: ONLINE / SYNCED]', 'ok');
+    if(migrated) saveData();
   } catch(error){
     render();
     setStatus('[STATUS: OFFLINE MODE]', '');
@@ -1054,10 +1099,9 @@ function popLevel(){
 }
 
 function addXP(amount, srcEl){
-  const oldLevel = Math.floor(state.xp/100) + 1;
-  state.xp += amount;
-  if(state.xp < 0) state.xp = 0;
-  const newLevel = Math.floor(state.xp/100) + 1;
+  const oldLevel = levelFromXP(state.xp);
+  state.xp = Math.max(0, state.xp + amount);
+  const newLevel = levelFromXP(state.xp);
   state.level = newLevel;
 
   const pt = centerOf(srcEl);
@@ -1073,8 +1117,11 @@ function addXP(amount, srcEl){
       renderXP(); popLevel();
       toast('Advancement Made!', 'Reached Level ' + newLevel, 'adv', 'pick');
     } else {
-      $('xp-text').textContent = '100 / 100';
+      /* добиваем бар старого уровня до максимума, потом анимация и переход на новый */
+      const full = xpNeed(oldLevel);
+      $('xp-text').textContent = full + ' / ' + full;
       $('xp-bar').style.width = '100%';
+      $('xp-left').textContent = '0 TO GO';
       FX.levelUp(newLevel, () => { renderXP(); popLevel(); });
     }
   } else {
@@ -1191,10 +1238,15 @@ function iconFor(name, type){
 }
 
 function renderXP(){
-  $('level-display').textContent = state.level;
-  const v = state.xp % 100;
-  $('xp-text').textContent = v + ' / 100';
-  $('xp-bar').style.width = v + '%';
+  const L = levelFromXP(state.xp);
+  const need = xpNeed(L);
+  const v = state.xp - xpTotalFor(L);
+  state.level = L;
+  $('level-display').textContent = L;
+  $('xp-text').textContent = v + ' / ' + need;
+  $('xp-bar').style.width = (v/need*100) + '%';
+  $('xp-total').textContent = 'TOTAL ' + state.xp;
+  $('xp-left').textContent = (need - v) + ' TO GO';
 }
 
 function itemHTML(item, type){
